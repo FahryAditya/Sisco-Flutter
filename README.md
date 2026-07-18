@@ -195,7 +195,7 @@ Firestore Security Rules menerapkan RBAC ketat berbasis peran pengguna, memastik
 
 Dikembangkan oleh **Mimin Adresteia** — SKARLAKES Ecosystem.
 
-Instagram { @isco_skarla
+Instagram { @sisco_skarla
 
 Mimin Adresteia : @miminadresteia
 
