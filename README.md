@@ -3,7 +3,6 @@
 <div align="center">
 
 **Versi:** 20.5.0  
-**Sekolah:** SMK Airlangga Balikpapan (Yayasan Airlangga Balikpapan)  
 **Platform:** Android • iOS • Web • Windows • macOS • Linux  
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.12-02569B)](https://flutter.dev/)
