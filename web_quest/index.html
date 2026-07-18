@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0057B3" />
+  <title>Airlangga QR Quest</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="brand">
+      <div class="badge">QR</div>
+      <div>
+        <h1>Airlangga QR Quest</h1>
+        <p class="sub">LDK OSIS &amp; MPK</p>
+      </div>
+    </header>
+
+    <section id="state-loading" class="card center">
+      <div class="spinner" aria-hidden="true"></div>
+      <p>Memuat soal…</p>
+    </section>
+
+    <section id="state-error" class="card center hidden">
+      <div class="icon-bad">!</div>
+      <h2 id="error-title">Soal tidak ditemukan</h2>
+      <p id="error-msg" class="muted">Periksa kembali QR yang dipindai.</p>
+    </section>
+
+    <section id="state-question" class="card hidden">
+      <div class="qhead">
+        <span id="q-kode" class="kode"></span>
+        <span id="q-poin" class="poin"></span>
+      </div>
+      <p id="q-text" class="qtext"></p>
+      <div class="note">
+        <strong>Petunjuk:</strong> Salin soal ini, lalu tulis jawabanmu di kertas.
+      </div>
+    </section>
+
+    <footer class="foot muted">Airlangga QR Quest</footer>
+  </main>
+
+  <script type="module" src="app.js?v=2"></script>
+</body>
+</html>

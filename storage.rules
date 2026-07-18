@@ -1,0 +1,65 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper functions
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isLoggedIn() &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in
+          ['superadmin', 'admin', 'administrator'];
+    }
+
+    function isAdminOrOrgAdmin() {
+      return isLoggedIn() &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in
+          ['superadmin', 'admin', 'administrator', 'organisasi', 'eskul', 'organization_admin'];
+    }
+
+    function isImageFile() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function isValidSize() {
+      return request.resource.size <= 5 * 1024 * 1024; // 5MB
+    }
+
+    // ===== ORGANIZATION LOGOS =====
+    match /organization_logos/{fileName} {
+      allow read: if isLoggedIn();
+      allow write: if isAdmin() && isImageFile() && isValidSize();
+    }
+
+    // ===== EXPENSE PROOFS =====
+    match /expense_proofs/{fileName} {
+      allow read: if isAdminOrOrgAdmin();
+      allow write: if isAdminOrOrgAdmin() && isValidSize();
+    }
+
+    // ===== EMAIL ATTACHMENTS =====
+    match /email_attachments/{fileName} {
+      allow read: if isAdmin();
+      allow write: if isAdmin() && isValidSize();
+    }
+
+    // ===== DOCUMENTATION PHOTOS =====
+    match /documentation/{fileName} {
+      allow read: if isLoggedIn();
+      allow write: if isAdminOrOrgAdmin() && isImageFile() && isValidSize();
+    }
+
+    // ===== MEMBER PHOTOS =====
+    match /member_photos/{fileName} {
+      allow read: if isLoggedIn();
+      allow write: if isAdminOrOrgAdmin() && isImageFile() && isValidSize();
+    }
+
+    // ===== DEFAULT: deny all other paths =====
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

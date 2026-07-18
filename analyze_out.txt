@@ -1,0 +1,79 @@
+﻿Analyzing sisko...                                              
+
+warning - Unused import: 'models/user.dart'. Try removing the import directive - lib\app.dart:4:8 - unused_import
+warning - Unused import: 'services/auth_service.dart'. Try removing the import directive - lib\app.dart:6:8 - unused_import
+warning - Unused import: 'package:intl/intl.dart'. Try removing the import directive - lib\screens\absensi\absensi_page.dart:4:8 - unused_import
+warning - Unused import: '../../providers/attendance_provider.dart'. Try removing the import directive - lib\screens\absensi\absensi_page.dart:6:8 - unused_import
+   info - Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check - lib\screens\absensi\absensi_page.dart:36:35 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check - lib\screens\absensi\absensi_page.dart:37:24 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check - lib\screens\admin\admin_page.dart:52:25 - use_build_context_synchronously
+warning - Unused import: '../../providers/organization_provider.dart'. Try removing the import directive - lib\screens\admin_org\admin_org_home.dart:5:8 - unused_import
+warning - Unused import: 'package:provider/provider.dart'. Try removing the import directive - lib\screens\admin_org\org_workspace_page.dart:2:8 - unused_import
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\screens\admin_org\org_workspace_page.dart:110:21 - curly_braces_in_flow_control_structures
+warning - Unused import: '../../providers/cash_provider.dart'. Try removing the import directive - lib\screens\dashboard\dashboard_page.dart:6:8 - unused_import
+  error - Undefined name 'Timestamp'. Try correcting the name to one that is defined, or defining the name - lib\screens\dokumentasi\dokumentasi_page.dart:63:28 - undefined_identifier
+   info - The 'child' argument should be last in widget constructor invocations. Try moving the argument to the end of the argument list - lib\screens\dokumentasi\dokumentasi_page.dart:79:65 - sort_child_properties_last
+   info - Unnecessary escape in string literal. Remove the '\' escape - lib\screens\dokumentasi\dokumentasi_page.dart:118:52 - unnecessary_string_escapes
+warning - Unused import: '../../utils/formatters.dart'. Try removing the import directive - lib\screens\home\home_page.dart:7:8 - unused_import
+warning - Unused import: 'package:cloud_firestore/cloud_firestore.dart'. Try removing the import directive - lib\screens\kas\kas_page.dart:10:8 - unused_import
+   info - Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check - lib\screens\kas\kas_page.dart:222:19 - use_build_context_synchronously
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement - lib\screens\kas\kas_page.dart:239:13 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check - lib\screens\kas\kas_page.dart:296:19 - use_build_context_synchronously
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement - lib\screens\laporan\laporan_page.dart:64:11 - deprecated_member_use
+  error - Unterminated string literal - lib\screens\laporan\laporan_page.dart:91:183 - unterminated_string_literal
+  error - Expected to find ',' - lib\screens\laporan\laporan_page.dart:92:13 - expected_token
+  error - Too many positional arguments: 0 expected, but 1 found. Try removing the extra positional arguments, or specifying the name for named arguments - lib\screens\laporan\laporan_page.dart:92:13 - extra_positional_arguments_could_be_named
+  error - Unterminated string literal - lib\screens\laporan\laporan_page.dart:92:194 - unterminated_string_literal
+  error - Expected to find ',' - lib\screens\laporan\laporan_page.dart:93:13 - expected_token
+  error - Too many positional arguments: 0 expected, but 1 found. Try removing the extra positional arguments, or specifying the name for named arguments - lib\screens\laporan\laporan_page.dart:93:13 - extra_positional_arguments_could_be_named
+  error - Unterminated string literal - lib\screens\laporan\laporan_page.dart:93:180 - unterminated_string_literal
+  error - Expected to find ',' - lib\screens\laporan\laporan_page.dart:94:13 - expected_token
+  error - Too many positional arguments: 0 expected, but 1 found. Try removing the extra positional arguments, or specifying the name for named arguments - lib\screens\laporan\laporan_page.dart:94:13 - extra_positional_arguments_could_be_named
+  error - Unterminated string literal - lib\screens\laporan\laporan_page.dart:94:183 - unterminated_string_literal
+  error - Expected to find ',' - lib\screens\laporan\laporan_page.dart:95:13 - expected_token
+  error - Too many positional arguments: 0 expected, but 1 found. Try removing the extra positional arguments, or specifying the name for named arguments - lib\screens\laporan\laporan_page.dart:95:13 - extra_positional_arguments_could_be_named
+  error - Unterminated string literal - lib\screens\laporan\laporan_page.dart:95:186 - unterminated_string_literal
+  error - Expected to find ')' - lib\screens\laporan\laporan_page.dart:96:11 - expected_token
+warning - Unused import: 'package:provider/provider.dart'. Try removing the import directive - lib\screens\log_aktivitas\log_aktivitas_page.dart:2:8 - unused_import
+warning - Unused import: '../../providers/auth_provider.dart'. Try removing the import directive - lib\screens\log_aktivitas\log_aktivitas_page.dart:4:8 - unused_import
+warning - Unused import: '../../utils/formatters.dart'. Try removing the import directive - lib\screens\log_aktivitas\log_aktivitas_page.dart:8:8 - unused_import
+   info - Unnecessary escape in string literal. Remove the '\' escape - lib\screens\log_aktivitas\log_aktivitas_page.dart:81:37 - unnecessary_string_escapes
+  error - Unterminated string literal - lib\screens\log_aktivitas\log_aktivitas_page.dart:81:108 - unterminated_string_literal
+  error - Expected to find ',' - lib\screens\log_aktivitas\log_aktivitas_page.dart:82:21 - expected_token
+  error - The named parameter 'trailing' isn't defined. Try correcting the name to an existing named parameter's name, or defining a named parameter with the name 'trailing' - lib\screens\log_aktivitas\log_aktivitas_page.dart:82:21 - undefined_named_parameter
+  error - Expected to find ')' - lib\screens\log_aktivitas\log_aktivitas_page.dart:83:21 - expected_token
+   info - The 'child' argument should be last in widget constructor invocations. Try moving the argument to the end of the argument list - lib\screens\materi\materi_page.dart:95:65 - sort_child_properties_last
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement - lib\screens\materi\materi_page.dart:117:11 - deprecated_member_use
+warning - Unused import: '../../models/achievement.dart'. Try removing the import directive - lib\screens\organisasi\organisasi_page.dart:9:8 - unused_import
+  error - Unterminated string literal - lib\screens\pencapaian\pencapaian_page.dart:82:34 - unterminated_string_literal
+  error - Expected to find ',' - lib\screens\pencapaian\pencapaian_page.dart:83:9 - expected_token
+  error - The named parameter 'content' isn't defined. Try correcting the name to an existing named parameter's name, or defining a named parameter with the name 'content' - lib\screens\pencapaian\pencapaian_page.dart:83:9 - undefined_named_parameter
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement - lib\screens\pencapaian\pencapaian_page.dart:86:15 - deprecated_member_use
+  error - The named parameter 'actions' isn't defined. Try correcting the name to an existing named parameter's name, or defining a named parameter with the name 'actions' - lib\screens\pencapaian\pencapaian_page.dart:91:9 - undefined_named_parameter
+  error - Undefined name 'Timestamp'. Try correcting the name to one that is defined, or defining the name - lib\screens\pencapaian\pencapaian_page.dart:98:26 - undefined_identifier
+  error - Expected to find ')' - lib\screens\pencapaian\pencapaian_page.dart:104:6 - expected_token
+   info - The 'child' argument should be last in widget constructor invocations. Try moving the argument to the end of the argument list - lib\screens\pencapaian\pencapaian_page.dart:112:65 - sort_child_properties_last
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement - lib\screens\pencapaian\pencapaian_page.dart:129:11 - deprecated_member_use
+   info - Unnecessary escape in string literal. Remove the '\' escape - lib\screens\pencapaian\pencapaian_page.dart:154:48 - unnecessary_string_escapes
+  error - Expected to find ')' - lib\screens\pencapaian\pencapaian_page.dart:159:17 - expected_token
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement - lib\screens\pengeluaran\pengeluaran_page.dart:59:13 - deprecated_member_use
+warning - Unused import: '../../utils/formatters.dart'. Try removing the import directive - lib\screens\rekap_absensi\rekap_absensi_page.dart:9:8 - unused_import
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement - lib\screens\rekap_absensi\rekap_absensi_page.dart:53:11 - deprecated_member_use
+  error - Unterminated string literal - lib\screens\rekap_absensi\rekap_absensi_page.dart:74:89 - unterminated_string_literal
+  error - Expected to find ')' - lib\screens\rekap_absensi\rekap_absensi_page.dart:75:13 - expected_token
+   info - Unnecessary escape in string literal. Remove the '\' escape - lib\screens\rekap_absensi\rekap_absensi_page.dart:79:21 - unnecessary_string_escapes
+   info - Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check - lib\screens\wawancara\wawancara_page.dart:209:19 - use_build_context_synchronously
+warning - Unused import: 'dart:convert'. Try removing the import directive - lib\services\auth_service.dart:1:8 - unused_import
+warning - Unused import: 'package:flutter/foundation.dart'. Try removing the import directive - lib\services\auth_service.dart:2:8 - unused_import
+warning - Unnecessary cast. Try removing the cast - lib\services\auth_service.dart:64:37 - unnecessary_cast
+warning - The library 'package:sisko/models/user.dart' doesn't export a member with the hidden name 'Timestamp'. Try removing the name from the list of hidden members - lib\services\firestore_service.dart:2:35 - undefined_hidden_name
+warning - Unused import: 'package:flutter/foundation.dart'. Try removing the import directive - lib\utils\exp_helper.dart:1:8 - unused_import
+warning - Unused import: 'package:flutter/material.dart'. Try removing the import directive - lib\utils\formatters.dart:1:8 - unused_import
+
+flutter : 69 issues found. (ran in 5.1s)
+At line:1 char:1
++ flutter analyze 2>&1 | Out-File -FilePath analyze_out.txt -Encoding u ...
++ ~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (69 issues found. (ran in 5.1s):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

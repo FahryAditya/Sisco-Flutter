@@ -1,0 +1,351 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== FUNGSI HELPER =====
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function getOrgIds() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgIds;
+    }
+
+    function isAdmin() {
+      return isLoggedIn() &&
+        getRole() in ['administrator', 'superadmin', 'admin'];
+    }
+
+    function isOrgAdmin() {
+      return isLoggedIn() &&
+        getRole() in ['organization_admin', 'admin_organisasi', 'admin_eskul'];
+    }
+
+    function isAdminOrOrgAdmin() {
+      return isAdmin() || isOrgAdmin();
+    }
+
+    function isPembina() {
+      return isLoggedIn() &&
+        getRole() in ['pembina_organisasi', 'pembina_eskul'];
+    }
+
+    function isAdminOrPembina() {
+      return isAdmin() || isOrgAdmin() || isPembina();
+    }
+
+    function isOrgMember(orgId) {
+      return isLoggedIn() && isAssignedTo(orgId);
+    }
+
+    function isAssignedTo(orgId) {
+      return isAdmin() || orgId in getOrgIds();
+    }
+
+    // ===== USERS =====
+    match /users/{userId} {
+      allow read: if isLoggedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAdmin();
+      allow update: if request.auth.uid == userId || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ===== ORGANIZATIONS =====
+    match /organizations/{orgId} {
+      allow read: if isLoggedIn();
+      allow create, update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ===== MEMBERS (PESERTA) =====
+    match /members/{memberId} {
+      allow read: if isLoggedIn() && (
+        isAdmin() || isAssignedTo(resource.data.organizationId)
+      );
+
+      allow create: if isLoggedIn() &&
+        isAdminOrOrgAdmin() &&
+        isAssignedTo(request.resource.data.organizationId) &&
+        request.resource.data.keys().hasAll(['organizationId', 'name']) &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() >= 3;
+
+      allow update: if isLoggedIn() && (
+        isAdmin() ||
+        (isAdminOrOrgAdmin() && isAssignedTo(resource.data.organizationId))
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // ===== ATTENDANCE (ABSENSI) =====
+    match /attendance/{attId} {
+      allow read: if isLoggedIn() && (
+        isAdmin() || isAssignedTo(resource.data.organizationId)
+      );
+
+      allow create: if isLoggedIn() &&
+        isAdminOrPembina() &&
+        isAssignedTo(request.resource.data.organizationId);
+
+      allow update: if isLoggedIn() && (
+        isAdmin() || (isAdminOrPembina() && isAssignedTo(resource.data.organizationId))
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // ===== CASH TRANSACTIONS (KAS) =====
+    match /cash_transactions/{txId} {
+      allow read: if isLoggedIn() && (
+        isAdmin() || isAssignedTo(resource.data.organizationId)
+      );
+
+      allow create: if isLoggedIn() &&
+        isAdminOrPembina() &&
+        isAssignedTo(request.resource.data.organizationId);
+
+      allow delete: if isAdmin();
+    }
+
+    // ===== CASH EXPENSES (PENGELUARAN) =====
+    match /cash_expenses/{exId} {
+      allow read: if isLoggedIn() && (
+        isAdmin() || isAssignedTo(resource.data.organizationId)
+      );
+
+      allow create: if isLoggedIn() &&
+        isAdminOrPembina() &&
+        isAssignedTo(request.resource.data.organizationId);
+
+      allow delete: if isAdmin();
+    }
+
+    // ===== INTERVIEW SESSIONS =====
+    match /interview_sessions/{sesiId} {
+      allow read: if isLoggedIn();
+      allow create, update: if isAdminOrOrgAdmin();
+      allow delete: if isAdmin();
+
+      match /queues/{queueId} {
+        allow read: if isLoggedIn();
+        allow create, update: if isAdminOrOrgAdmin();
+        allow delete: if isAdmin();
+      }
+      match /chats/{chatId} {
+        allow read: if isLoggedIn();
+        allow create: if isLoggedIn();
+        allow delete: if isAdmin();
+      }
+      match /qr_tokens/{qrId} {
+        allow read, create, update: if isAdminOrOrgAdmin();
+        allow delete: if isAdmin();
+      }
+    }
+
+    // ===== INTERVIEW RESULTS =====
+    match /interview_results/{resultId} {
+      allow read: if isLoggedIn();
+      allow create, update: if isAdminOrOrgAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ===== REGISTRATIONS (PUBLIC) =====
+    // Buat: publik (calon anggota mendaftar). Baca/ubah/hapus: hanya
+    // Administrator atau admin org yang di-sign ke organisasi terkait.
+    match /registrations/{regId} {
+      allow create: if request.resource.data.keys().hasAll([
+        'organizationId', 'namaPeserta', 'kelas', 'kejuruan', 'emailGmail', 'status'
+      ]);
+      allow read, update, delete: if isAdminOrOrgAdmin() &&
+        isAssignedTo(resource.data.organizationId);
+    }
+
+    // ===== ACHIEVEMENTS =====
+    match /achievements/{achId} {
+      allow read: if isLoggedIn() && (
+        isAdmin() || isAssignedTo(resource.data.organizationId)
+      );
+      allow create, delete: if isAdminOrOrgAdmin();
+    }
+
+    match /members/{memberId}/achievements/{maId} {
+      allow read: if isLoggedIn();
+      allow create: if isAdminOrOrgAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ===== DAILY MATERIALS =====
+    match /daily_materials/{matId} {
+      allow read: if isLoggedIn() && (
+        isAdmin() || isAssignedTo(resource.data.organizationId)
+      );
+      allow create, update: if isAdminOrPembina();
+      allow delete: if isAdmin();
+    }
+
+    // ===== DOCUMENTATION =====
+    match /documentation/{docId} {
+      allow read: if isLoggedIn() && (
+        isAdmin() || isAssignedTo(resource.data.organizationId)
+      );
+      allow create: if isAdminOrPembina();
+      allow delete: if isAdmin();
+    }
+
+    // ===== SCHEDULES =====
+    match /schedules/{schedId} {
+      allow read: if isLoggedIn() && (
+        isAdmin() || isAssignedTo(resource.data.organizationId)
+      );
+      allow create, update: if isAdminOrOrgAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ===== ACTIVITY LOGS =====
+    match /activity_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isLoggedIn();
+    }
+
+    // ===== STUDENTS =====
+    match /students/{studentId} {
+      allow read: if isLoggedIn();
+      allow create: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ===== ANNOUNCEMENTS =====
+    match /announcements/{annId} {
+      allow read: if isLoggedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ===== APP FEATURES (Airlangga QR Quest) =====
+    // Dokumen tunggal konfigurasi aktivasi fitur. Boleh dibaca semua yang login
+    // agar app bisa menampilkan/menyembunyikan menu quest secara real-time.
+    // Yang boleh mengaktifkan/mengubah: Administrator + Admin Org (organisasi,
+    // bukan eskul) — sesuai aturan siapa yang mengendalikan aktivasi.
+    match /app_features/{docId} {
+      allow read: if isLoggedIn();
+      allow create, update, delete: if isAdmin() ||
+        getRole() in ['organization_admin', 'admin_organisasi', 'organisasi'];
+    }
+
+    // ===== QUEST QUESTIONS (soal esai) =====
+    // get: publik — halaman web soal (tanpa login) membaca satu dokumen soal
+    //   berdasarkan id dari QR. Tidak ada data sensitif; hanya teks pertanyaan.
+    // list: hanya admin/admin org — mencegah enumerasi seluruh soal dari luar.
+    // tulis: admin + admin org (organisasi), sama seperti pengendali fitur.
+    match /quest_questions/{qId} {
+      allow get: if true;
+      allow list: if isAdmin() ||
+        getRole() in ['organization_admin', 'admin_organisasi', 'organisasi'];
+      allow create, update, delete: if isAdmin() ||
+        getRole() in ['organization_admin', 'admin_organisasi', 'organisasi'];
+    }
+
+    // ===== QUEST SLOTS (token QR stabil; isinya bisa diacak) =====
+    // get: publik — halaman web membaca slot dari QR untuk tahu questionId
+    //   yang sedang ditugaskan. Tidak ada data sensitif (hanya label + ref).
+    // list: admin/admin org saja.
+    // tulis (termasuk acak ulang & assign): admin + admin org.
+    match /quest_slots/{slotId} {
+      allow get: if true;
+      allow list: if isAdmin() ||
+        getRole() in ['organization_admin', 'admin_organisasi', 'organisasi'];
+      allow create, update, delete: if isAdmin() ||
+        getRole() in ['organization_admin', 'admin_organisasi', 'organisasi'];
+    }
+
+    // ===== EMAIL REQUESTS =====
+    match /email_requests/{reqId} {
+      allow create: if isLoggedIn();
+      allow read: if isAdmin();
+    }
+
+    // ===== EXP LOGS =====
+    match /exp_logs/{logId} {
+      allow create: if isLoggedIn();
+      allow read: if isAdmin();
+    }
+
+    // ===== DIRECTORY (BUKU ALAMAT STAFF UNTUK CHAT) =====
+    // Cermin ringan dari `users` yang HANYA berisi nama + role (tanpa data
+    // sensitif seperti password/email). Boleh dibaca semua staff agar bisa
+    // memilih kontak chat; tiap orang hanya boleh menulis entri dirinya sendiri,
+    // dan administrator boleh menulis entri siapa pun (saat membuat user baru).
+    match /directory/{uid} {
+      allow read: if isLoggedIn();
+      allow write: if isLoggedIn() && (request.auth.uid == uid || isAdmin());
+    }
+
+    // ===== CONVERSATIONS (CHAT ANTAR STAFF) =====
+    // Chat 1-lawan-1 antar SEMUA staff (administrator, admin org/eskul, pembina
+    // org/eskul). SENGAJA tidak ada pembatasan berbasis role di sini — satu-
+    // satunya syarat menulis/membaca adalah pengguna merupakan PESERTA
+    // percakapan. Keanggotaan dibaca dari field `participantIds` (sumber
+    // kebenaran, sekaligus cocok dengan query arrayContains di ChatService),
+    // bukan dari mem-parsing convoId.
+    //
+    // conversationId = pasangan UID terurut digabung '_' (lihat ChatService).
+    // Untuk pesan, dokumen percakapan induk bisa saja BARU dibuat pada batch
+    // yang sama; rules tidak melihat pending write batch pada get(), sehingga
+    // pengiriman pesan divalidasi lewat convoId.split('_') + senderId.
+    match /conversations/{convoId} {
+      allow read: if isLoggedIn() &&
+        request.auth.uid in resource.data.participantIds;
+
+      // Pengirim wajib mencantumkan dirinya sebagai peserta. Saat batch pertama
+      // dokumen belum ada (create) → cukup validasi request.resource; pada
+      // update, pengguna juga harus sudah menjadi peserta sebelumnya.
+      allow create: if isLoggedIn() &&
+        request.auth.uid in request.resource.data.participantIds;
+      allow update: if isLoggedIn() &&
+        request.auth.uid in resource.data.participantIds &&
+        request.auth.uid in request.resource.data.participantIds;
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isLoggedIn() &&
+          request.auth.uid in convoId.split('_');
+        allow create: if isLoggedIn() &&
+          request.auth.uid in convoId.split('_') &&
+          request.resource.data.senderId == request.auth.uid &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() > 0;
+
+        // Update terbatas:
+        //  • Reaksi emoji → peserta mana pun, HANYA field `reactions`.
+        //  • Edit / hapus  → hanya PENGIRIM, terbatas pada text/editedAt/
+        //    deleted/reactions (senderId & createdAt tak boleh berubah).
+        allow update: if isLoggedIn() &&
+          request.auth.uid in convoId.split('_') && (
+            request.resource.data.diff(resource.data)
+              .affectedKeys().hasOnly(['reactions'])
+            ||
+            (resource.data.senderId == request.auth.uid &&
+             request.resource.data.diff(resource.data)
+               .affectedKeys().hasOnly(['text', 'editedAt', 'deleted', 'reactions']))
+          );
+
+        allow delete: if false;
+      }
+
+      // ===== TYPING (indikator "sedang mengetik") =====
+      // Tiap peserta hanya boleh menulis status miliknya sendiri; keduanya
+      // boleh saling membaca.
+      match /typing/{uid} {
+        allow read: if isLoggedIn() &&
+          request.auth.uid in convoId.split('_');
+        allow write: if isLoggedIn() &&
+          request.auth.uid == uid &&
+          request.auth.uid in convoId.split('_');
+      }
+    }
+  }
+}
