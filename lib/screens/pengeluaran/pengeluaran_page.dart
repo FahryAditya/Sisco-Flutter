@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../providers/organization_provider.dart';
 import '../../providers/cash_provider.dart';
 import '../../theme/app_theme.dart';
@@ -38,6 +39,36 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
         if (mounted) { AppDialogs.hide(context); await AppDialogs.showError(context, 'Gagal menghapus pengeluaran: $e'); }
       }
     }
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 110,
+          child: Text(
+            label,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const Text(': ', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        Expanded(
+          child: Text(
+            value,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -105,29 +136,82 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
               ),
             )
           else
-            ...cash.expenses.map((ex) => Card(
-                  child: ListTile(
-                    title: Text(ex.keterangan),
-                    subtitle: Text(Formatters.formatDate(ex.tanggal)),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '-${Formatters.formatCurrency(ex.nominal)}',
-                          style: TextStyle(
-                            color: AppColors.danger,
-                            fontWeight: FontWeight.bold,
+            ...cash.expenses.map((ex) {
+              final String keperluan = ex.keterangan;
+              final String dayDate = DateFormat('EEEE, dd MMMM', 'id').format(ex.tanggal);
+              final String timeStr = DateFormat('HH:mm').format(ex.tanggal);
+              final String yearStr = DateFormat('yyyy').format(ex.tanggal);
+              final String nominalStr = Formatters.formatCurrency(ex.nominal);
+
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 1,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.danger.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'PENGELUARAN',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.danger,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.danger),
+                                onPressed: () => _delete(ex.id),
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.danger),
-                          onPressed: () => _delete(ex.id),
-                        ),
-                      ],
-                    ),
+                          Text(
+                            '-$nominalStr',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.danger,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 16),
+                      _buildInfoRow('Nama Keperluan', keperluan),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Expanded(child: _buildInfoRow('Tanggal Hari', dayDate)),
+                          Expanded(child: _buildInfoRow('Jam', timeStr)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Expanded(child: _buildInfoRow('Tahun', yearStr)),
+                          Expanded(child: _buildInfoRow('Nominal', nominalStr)),
+                        ],
+                      ),
+                    ],
                   ),
-                )),
+                ),
+              );
+            }),
         ],
       ),
     );

@@ -68,7 +68,7 @@ service cloud.firestore {
       );
 
       allow create: if isLoggedIn() &&
-        isAdminOrOrgAdmin() &&
+        isAdminOrPembina() &&
         isAssignedTo(request.resource.data.organizationId) &&
         request.resource.data.keys().hasAll(['organizationId', 'name']) &&
         request.resource.data.name is string &&
@@ -76,10 +76,13 @@ service cloud.firestore {
 
       allow update: if isLoggedIn() && (
         isAdmin() ||
-        (isAdminOrOrgAdmin() && isAssignedTo(resource.data.organizationId))
+        (isAdminOrPembina() && isAssignedTo(resource.data.organizationId))
       );
 
-      allow delete: if isAdmin();
+      allow delete: if isLoggedIn() && (
+        isAdmin() ||
+        (isPembina() && isAssignedTo(resource.data.organizationId))
+      );
     }
 
     // ===== ATTENDANCE (ABSENSI) =====

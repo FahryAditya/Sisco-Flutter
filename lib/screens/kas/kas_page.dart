@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import '../../providers/organization_provider.dart';
 import '../../providers/cash_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -10,7 +11,6 @@ import '../../models/member.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/app_dropdown.dart';
-
 
 class KasPage extends StatefulWidget {
   const KasPage({super.key});
@@ -21,11 +21,30 @@ class KasPage extends StatefulWidget {
 
 class _KasPageState extends State<KasPage> {
   String? _selectedOrgId;
+  List<Member> _members = [];
 
   @override
   void initState() {
     super.initState();
     context.read<OrganizationProvider>().loadOrgs();
+  }
+
+  void _loadMembers(String orgId) async {
+    try {
+      final list = await FirestoreService.getMembers(orgId);
+      setState(() {
+        _members = list;
+      });
+    } catch (_) {}
+  }
+
+  Member? _findMember(String memberId) {
+    if (memberId.isEmpty) return null;
+    try {
+      return _members.firstWhere((m) => m.id == memberId);
+    } catch (_) {
+      return null;
+    }
   }
 
   void _showSetorDialog() async {
@@ -55,6 +74,36 @@ class _KasPageState extends State<KasPage> {
     );
   }
 
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 110,
+          child: Text(
+            label,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const Text(': ', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        Expanded(
+          child: Text(
+            value,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final orgs = context.watch<OrganizationProvider>().orgs;
@@ -71,11 +120,15 @@ class _KasPageState extends State<KasPage> {
             value: _selectedOrgId,
             items: orgs.map((o) => AppDropdownItem(value: o.id, label: o.nama)).toList(),
             onChanged: (v) {
-              setState(() => _selectedOrgId = v);
+              setState(() {
+                _selectedOrgId = v;
+              });
               if (v == null) {
                 context.read<CashProvider>().clear();
+                setState(() => _members = []);
               } else {
                 context.read<CashProvider>().subscribe(v);
+                _loadMembers(v);
               }
             },
           ),
@@ -154,28 +207,144 @@ class _KasPageState extends State<KasPage> {
               ),
             )
           else ...[
-            ...cashState.transactions.map((tx) => ListTile(
-                  title: Text(tx.description),
-                  subtitle: Text(Formatters.formatDateTime(tx.createdAt)),
-                  trailing: Text(
-                    '+${Formatters.formatCurrency(tx.amount)}',
-                    style: TextStyle(
-                      color: AppColors.success,
-                      fontWeight: FontWeight.bold,
-                    ),
+            ...cashState.transactions.map((tx) {
+              final member = _findMember(tx.memberId);
+              final String name = tx.memberName ?? member?.name ?? 'Anggota';
+              final String kelas = tx.memberKelas ?? member?.kelas ?? 'Umum';
+              final String day = DateFormat('EEEE', 'id').format(tx.tanggal);
+              final String dateStr = DateFormat('dd MMMM yyyy', 'id').format(tx.tanggal);
+              final String timeStr = DateFormat('HH:mm').format(tx.tanggal);
+              final String amountStr = Formatters.formatCurrency(tx.amount);
+
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 1,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'PEMASUKAN',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.success,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '+$amountStr',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 16),
+                      _buildInfoRow('Nama', name),
+                      const SizedBox(height: 6),
+                      _buildInfoRow('Kelas', kelas),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Expanded(child: _buildInfoRow('Hari', day)),
+                          Expanded(child: _buildInfoRow('Tanggal', dateStr)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Expanded(child: _buildInfoRow('Jam', timeStr)),
+                          Expanded(child: _buildInfoRow('Total Bayar', amountStr)),
+                        ],
+                      ),
+                      if (tx.description.isNotEmpty && tx.description != 'Setor kas') ...[
+                        const SizedBox(height: 6),
+                        _buildInfoRow('Keterangan', tx.description),
+                      ],
+                    ],
                   ),
-                )),
-            ...cashState.expenses.map((ex) => ListTile(
-                  title: Text(ex.keterangan),
-                  subtitle: Text(Formatters.formatDateTime(ex.tanggal)),
-                  trailing: Text(
-                    '-${Formatters.formatCurrency(ex.nominal)}',
-                    style: TextStyle(
-                      color: AppColors.danger,
-                      fontWeight: FontWeight.bold,
-                    ),
+                ),
+              );
+            }),
+            ...cashState.expenses.map((ex) {
+              final String keperluan = ex.keterangan;
+              final String dayDate = DateFormat('EEEE, dd MMMM', 'id').format(ex.tanggal);
+              final String timeStr = DateFormat('HH:mm').format(ex.tanggal);
+              final String yearStr = DateFormat('yyyy').format(ex.tanggal);
+              final String nominalStr = Formatters.formatCurrency(ex.nominal);
+
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 1,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.danger.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'PENGELUARAN',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.danger,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '-$nominalStr',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.danger,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 16),
+                      _buildInfoRow('Nama Keperluan', keperluan),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Expanded(child: _buildInfoRow('Tanggal Hari', dayDate)),
+                          Expanded(child: _buildInfoRow('Jam', timeStr)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Expanded(child: _buildInfoRow('Tahun', yearStr)),
+                          Expanded(child: _buildInfoRow('Nominal', nominalStr)),
+                        ],
+                      ),
+                    ],
                   ),
-                )),
+                ),
+              );
+            }),
           ],
         ],
       ),
@@ -227,10 +396,19 @@ class _SetorKasSheetState extends State<_SetorKasSheet> {
       await FirestoreService.createCashTransaction({
         'organizationId': widget.orgId,
         'memberId': _selectedMember!.id,
+        'memberName': _selectedMember!.name,
+        'memberKelas': _selectedMember!.kelas ?? '',
         'amount': amount,
         'description': _descC.text.trim().isEmpty ? 'Setor kas' : _descC.text.trim(),
+        'tanggal': FieldValue.serverTimestamp(),
       });
-      await FirestoreService.logAction(userId: user?.id ?? '', userNama: user?.nama ?? '', aksi: 'CREATE', tabel: 'cash_transactions', deskripsi: 'Setor kas ${_selectedMember!.name}: $amount');
+      await FirestoreService.logAction(
+        userId: user?.id ?? '',
+        userNama: user?.nama ?? '',
+        aksi: 'CREATE',
+        tabel: 'cash_transactions',
+        deskripsi: 'Setor kas ${_selectedMember!.name}: $amount',
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Setor kas berhasil')));
         Navigator.pop(context);
@@ -325,7 +503,13 @@ class _TarikKasSheetState extends State<_TarikKasSheet> {
         'tanggal': FieldValue.serverTimestamp(),
         'createdBy': user?.id ?? '',
       });
-      await FirestoreService.logAction(userId: user?.id ?? '', userNama: user?.nama ?? '', aksi: 'CREATE', tabel: 'cash_expenses', deskripsi: 'Tarik kas: $amount untuk ${_descC.text.trim()}');
+      await FirestoreService.logAction(
+        userId: user?.id ?? '',
+        userNama: user?.nama ?? '',
+        aksi: 'CREATE',
+        tabel: 'cash_expenses',
+        deskripsi: 'Tarik kas: $amount untuk ${_descC.text.trim()}',
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tarik kas berhasil')));
         Navigator.pop(context);
@@ -372,4 +556,3 @@ class _TarikKasSheetState extends State<_TarikKasSheet> {
     );
   }
 }
-

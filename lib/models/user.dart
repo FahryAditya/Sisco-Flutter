@@ -136,6 +136,9 @@ class UserModel {
   /// Dokumentasi: Administrator + Admin Org + Admin Eskul + Pembina Org + Pembina Eskul.
   bool get canDokumentasi => isAdministrator || isOrganizationAdmin || isPembina;
 
+  /// Kelola anggota pada organisasi/eskul yang ditugaskan.
+  bool get canManageMembers => isAdministrator || isOrganizationAdmin || isPembina;
+
   String get roleDisplay {
     switch (role) {
       case 'administrator':

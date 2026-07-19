@@ -1,8 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 class CashTransaction {
   final String id;
   final String organizationId;
   final String memberId;
+  final String? memberName;
+  final String? memberKelas;
   final int amount;
   final String description;
   final String category;
@@ -14,6 +17,8 @@ class CashTransaction {
     required this.id,
     required this.organizationId,
     required this.memberId,
+    this.memberName,
+    this.memberKelas,
     required this.amount,
     required this.description,
     this.category = 'Lainnya',
@@ -27,6 +32,8 @@ class CashTransaction {
       id: docId,
       organizationId: map['organizationId'] as String? ?? '',
       memberId: map['memberId'] as String? ?? '',
+      memberName: map['memberName'] as String?,
+      memberKelas: map['memberKelas'] as String?,
       amount: map['amount'] as int? ?? 0,
       description: map['description'] as String? ?? '',
       category: map['category'] as String? ?? 'Lainnya',
@@ -40,6 +47,8 @@ class CashTransaction {
     return {
       'organizationId': organizationId,
       'memberId': memberId,
+      if (memberName != null) 'memberName': memberName,
+      if (memberKelas != null) 'memberKelas': memberKelas,
       'amount': amount,
       'description': description,
       'category': category,
@@ -100,4 +109,3 @@ class CashExpense {
     };
   }
 }
-

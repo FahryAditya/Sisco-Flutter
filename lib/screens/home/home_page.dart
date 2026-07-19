@@ -20,6 +20,7 @@ import '../organisasi/organisasi_page.dart';
 import '../leaderboard/leaderboard_page.dart';
 import '../jadwal/jadwal_page.dart';
 import '../admin_org/admin_org_home.dart';
+import '../anggota/anggota_page.dart';
 import '../profile/profile_page.dart';
 import '../materi/materi_page.dart';
 import '../laporan/laporan_page.dart';
@@ -138,6 +139,7 @@ class _HomePageState extends State<HomePage> {
     final canAuditLog = user?.canAuditLog ?? false;
     final canExportImport = user?.canExportImport ?? false;
     final canDokumentasi = user?.canDokumentasi ?? false;
+    final canManageMembers = user?.canManageMembers ?? false;
     final canSeeQuest = context.watch<QuestProvider>().canSeeQuestMenu(user);
 
     return Drawer(
@@ -161,6 +163,8 @@ class _HomePageState extends State<HomePage> {
                 _drawerItem(Icons.bar_chart_outlined, 'Laporan', Colors.indigo, () => _push(const LaporanPage())),
 
                 _sectionLabel('KEGIATAN'),
+                if (canManageMembers)
+                  _drawerItem(Icons.group_add_outlined, 'Anggota', Colors.green, () => _push(const AnggotaPage())),
                 _drawerItem(Icons.groups_outlined, 'Organisasi', Colors.orange, () => _push(const OrganisasiPage())),
                 if (canWawancara)
                   _drawerItem(Icons.record_voice_over_outlined, 'Wawancara', Colors.purple, () => _navigate(4)),

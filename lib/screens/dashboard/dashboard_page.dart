@@ -21,6 +21,7 @@ import '../admin_org/admin_org_home.dart';
 import '../profile/profile_page.dart';
 import '../wawancara/wawancara_page.dart';
 import '../organisasi/organisasi_page.dart';
+import '../anggota/anggota_page.dart';
 import '../admin/admin_page.dart';
 import '../materi/materi_page.dart';
 import '../laporan/laporan_page.dart';
@@ -369,8 +370,11 @@ class _DashboardPageState extends State<DashboardPage> {
     final canAuditLog = user?.canAuditLog ?? false;
     final canExportImport = user?.canExportImport ?? false;
     final canDokumentasi = user?.canDokumentasi ?? false;
+    final canManageMembers = user?.canManageMembers ?? false;
 
     return [
+      if (canManageMembers)
+        _gridCard(Icons.group_add, 'Anggota', Colors.green, () => _push(const AnggotaPage())),
       if (canWawancara)
         _gridCard(Icons.record_voice_over, 'Wawancara', Colors.purple, () => _push(const WawancaraPage())),
       if (isAdmin || isOrgAdmin)
@@ -400,4 +404,3 @@ class _DashboardPageState extends State<DashboardPage> {
     Navigator.push(context, SmoothPageRoute(builder: (_) => page));
   }
 }
-
