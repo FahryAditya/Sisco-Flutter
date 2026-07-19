@@ -6,6 +6,9 @@ void main() {
     test('jurusan tanpa rombel valid tanpa angka', () {
       expect(KelasHelper.isValid('X PPLG'), isTrue);
       expect(KelasHelper.isValid('XI DKV'), isTrue);
+      expect(KelasHelper.isValid('X AKL'), isTrue);
+      expect(KelasHelper.isValid('XI AKL'), isTrue);
+      expect(KelasHelper.isValid('XII AKL'), isTrue);
       expect(KelasHelper.isValid('XII TLM'), isTrue);
       expect(KelasHelper.isValid('X FARMASI'), isTrue);
     });
@@ -14,6 +17,7 @@ void main() {
       // Inti bug yang dilaporkan: "X PPLG 1" harus ditolak.
       expect(KelasHelper.isValid('X PPLG 1'), isFalse);
       expect(KelasHelper.isValid('XI DKV 2'), isFalse);
+      expect(KelasHelper.isValid('X AKL 1'), isFalse);
     });
 
     test('jurusan berrombel valid dengan angka yang benar', () {
@@ -34,7 +38,6 @@ void main() {
 
     test('jurusan tak dikenal ditolak', () {
       expect(KelasHelper.isValid('X ABCD 1'), isFalse);
-      expect(KelasHelper.isValid('X AKL 1'), isFalse);
     });
 
     test('tingkat tak dikenal ditolak', () {
@@ -52,6 +55,7 @@ void main() {
   group('KelasHelper.normalize', () {
     test('menyeragamkan bentuk kanonik', () {
       expect(KelasHelper.normalize('10 pplg'), 'X PPLG');
+      expect(KelasHelper.normalize('11 akl'), 'XI AKL');
       expect(KelasHelper.normalize('  xi   tjkt 2 '), 'XI TJKT 2');
       expect(KelasHelper.normalize('12 kesehatan 6'), 'XII KESEHATAN 6');
     });
@@ -67,6 +71,7 @@ void main() {
       // Perilaku lama yang salah: menyarankan "X PPLG 1".
       expect(KelasHelper.suggest('X PPLG 1'), 'X PPLG');
       expect(KelasHelper.suggest('XI DKV 3'), 'XI DKV');
+      expect(KelasHelper.suggest('XII AKL 2'), 'XII AKL');
     });
 
     test('menambahkan rombel pertama bila hilang', () {
@@ -87,6 +92,7 @@ void main() {
   group('KelasHelper.jurusanOf', () {
     test('mengambil nama jurusan', () {
       expect(KelasHelper.jurusanOf('X PPLG'), 'PPLG');
+      expect(KelasHelper.jurusanOf('XI AKL'), 'AKL');
       expect(KelasHelper.jurusanOf('XI KESEHATAN 3'), 'KESEHATAN');
       expect(KelasHelper.jurusanOf('X ABCD 1'), isNull);
     });
@@ -94,10 +100,11 @@ void main() {
 
   group('KelasHelper.semuaKelasValid', () {
     test('menghasilkan jumlah kombinasi yang benar', () {
-      // Per tingkat: PPLG,DKV,TLM,FARMASI (4) + TJKT(2)+MPLB(2)+KESEHATAN(6) = 14
-      // 3 tingkat => 42
-      expect(KelasHelper.semuaKelasValid.length, 42);
+      // Per tingkat: PPLG,DKV,AKL,TLM,FARMASI (5) + TJKT(2)+MPLB(2)+KESEHATAN(6) = 15
+      // 3 tingkat => 45
+      expect(KelasHelper.semuaKelasValid.length, 45);
       expect(KelasHelper.semuaKelasValid, contains('X PPLG'));
+      expect(KelasHelper.semuaKelasValid, contains('XI AKL'));
       expect(KelasHelper.semuaKelasValid, contains('XII KESEHATAN 6'));
       expect(KelasHelper.semuaKelasValid, isNot(contains('X PPLG 1')));
     });

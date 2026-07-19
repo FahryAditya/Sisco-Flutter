@@ -50,7 +50,7 @@ class _RegistrationLandingPageState extends State<RegistrationLandingPage> {
           if (_loading)
             const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
           else if (_orgs.isEmpty)
-            const Center(child: Padding(padding: EdgeInsets.all(32), child: Text('Belum ada organisasi tersedia', style: TextStyle(color: AppColors.textSecondary))))
+            Center(child: Padding(padding: const EdgeInsets.all(32), child: Text('Belum ada organisasi tersedia', style: TextStyle(color: AppColors.textSecondary))))
           else
             ..._orgs.map((org) => Card(child: ListTile(
               leading: CircleAvatar(

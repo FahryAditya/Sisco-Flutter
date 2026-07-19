@@ -47,6 +47,8 @@ dependencies:
   collection: ^1.18.0
   file_picker: ^8.1.0
   excel: ^4.0.0
+  archive: ^3.6.1
+  xml: ">=5.0.0 <7.0.0"
   share_plus: ^10.0.0
   flutter_dotenv: ^5.2.1
   http: ^1.2.2
@@ -64,6 +66,20 @@ dependencies:
   # URL eksternal (buka akun Instagram di app/browser).
   shared_preferences: ^2.3.2
   url_launcher: ^6.3.0
+
+  # Biometric login — sidik jari / Face ID
+  local_auth: ^2.3.0
+
+  # Live tracking kegiatan — map + lokasi real-time
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  geolocator: ^13.0.1
+
+  # Voice note di chat — rekam & putar suara
+  record: ^6.2.1
+  audioplayers: ^6.1.0
+
+
 
 dev_dependencies:
   flutter_test:

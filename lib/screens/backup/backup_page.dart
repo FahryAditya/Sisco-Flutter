@@ -5,12 +5,13 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../services/backup_service.dart';
+import '../../services/drive_backup_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/character_dialog.dart';
 import '../../widgets/empty_state.dart';
@@ -83,6 +84,146 @@ class _BackupPageState extends State<BackupPage> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _confirmCloudBackup() async {
+    final ok = await AppDialogs.showConfirm(
+      context,
+      message: 'Upload backup ke cloud Firebase Storage?\n'
+          'Data tersimpan aman dan bisa diunduh kapan saja.',
+      confirmLabel: 'Upload ke Cloud',
+    );
+    if (!ok || !mounted) return;
+    await _runCloudBackup();
+  }
+
+  Future<void> _runCloudBackup() async {
+    setState(() => _loading = true);
+    AppDialogs.showLoading(context,
+        kind: LoadingKind.sinkronasi,
+        message: 'Mengupload ke cloud...');
+    try {
+      final email = context.read<AuthProvider>().user?.email;
+      final result = await BackupService.buildBackup(exportedBy: email);
+      if (result.total == 0) throw Exception('Tidak ada data untuk dibackup');
+      final fileName = _fileName();
+      final url = await DriveBackupService.instance.uploadToCloud(
+        json: result.json,
+        fileName: fileName,
+      );
+      if (url == null) throw Exception('Gagal mengunggah backup ke penyimpanan cloud');
+      if (mounted) {
+        AppDialogs.hide(context);
+        setState(() {
+          _lastResult = result;
+          _lastFileName = fileName;
+        });
+        await AppDialogs.showSuccess(context, 'Backup cloud berhasil: $fileName');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppDialogs.hide(context);
+        await AppDialogs.showError(context, 'Gagal backup cloud: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _downloadFromCloud(String fileName) async {
+    AppDialogs.showLoading(context,
+        kind: LoadingKind.cariData,
+        message: 'Mengunduh $fileName...');
+    try {
+      final path = await DriveBackupService.instance.downloadFromCloud(fileName);
+      if (mounted) AppDialogs.hide(context);
+      if (path != null && mounted) {
+        await AppDialogs.showSuccess(context, 'Tersimpan di: $path');
+      }
+    } catch (e) {
+      if (mounted) {
+        AppDialogs.hide(context);
+        await AppDialogs.showError(context, 'Gagal mengunduh: $e');
+      }
+    }
+  }
+
+  Future<void> _deleteCloudBackup(String fileName) async {
+    final ok = await AppDialogs.showConfirm(
+      context,
+      message: 'Hapus backup "$fileName" dari cloud?',
+      confirmLabel: 'Hapus',
+    );
+    if (!ok) return;
+    final success = await DriveBackupService.instance.deleteFromCloud(fileName);
+    if (mounted) {
+      if (success) {
+        AppDialogs.showSuccess(context, 'Backup dihapus');
+      } else {
+        AppDialogs.showError(context, 'Gagal menghapus backup');
+      }
+    }
+  }
+
+  Widget _cloudBackupsSection(BuildContext context) {
+    return FutureBuilder<List<CloudBackupMeta>>(
+      future: DriveBackupService.instance.listCloudBackups(),
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(child: Padding(
+            padding: EdgeInsets.all(16),
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ));
+        }
+        final backups = snap.data ?? [];
+        if (backups.isEmpty) return const SizedBox.shrink();
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Icon(Icons.cloud_done, size: 20, color: AppColors.success),
+                const SizedBox(width: 8),
+                Text('Backup Cloud',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 15, fontWeight: FontWeight.w700,
+                  )),
+                const Spacer(),
+                Text('${backups.length} file',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12, color: AppColors.textHint)),
+              ]),
+              const Divider(height: 20),
+              ...backups.map((b) => ListTile(
+                dense: true,
+                leading: const Icon(Icons.cloud_download_outlined, size: 20),
+                title: Text(b.fileName, style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+                subtitle: Text(b.sizeLabel, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.textHint)),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.download, size: 18),
+                      onPressed: () => _downloadFromCloud(b.fileName),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.danger),
+                      onPressed: () => _deleteCloudBackup(b.fileName),
+                    ),
+                  ],
+                ),
+              )),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   /// Simpan bytes JSON ke perangkat (pola sama seperti ExportPage).
@@ -204,11 +345,27 @@ class _BackupPageState extends State<BackupPage> {
           ),
           onPressed: _loading ? null : _confirmAndBackup,
         ),
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          icon: const Icon(Icons.cloud_upload),
+          label: const Text('Backup ke Cloud (Firebase)'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1ABC9C),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onPressed: _loading ? null : _confirmCloudBackup,
+        ),
         if (_loading) ...[
           const SizedBox(height: 20),
           const Center(child: CircularProgressIndicator()),
         ],
         if (_lastResult != null && !_loading) _summaryCard(context),
+        const SizedBox(height: 24),
+        _cloudBackupsSection(context),
       ]),
     );
   }
@@ -260,7 +417,7 @@ class _BackupPageState extends State<BackupPage> {
           ),
           const SizedBox(height: 10),
           Row(children: [
-            const Icon(Icons.info_outline, size: 15, color: AppColors.textHint),
+            Icon(Icons.info_outline, size: 15, color: AppColors.textHint),
             const SizedBox(width: 6),
             Expanded(
               child: Text(

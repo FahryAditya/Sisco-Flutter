@@ -281,6 +281,10 @@ class SyncService {
       }
       return docs;
     } on FirebaseException catch (e) {
+      if (e.code == 'failed-precondition') {
+        debugPrint('SyncService: Index diperlukan — fallback ke cache (${e.code}: ${e.message})');
+        return _readFromCache(collection, cacheFilter, cacheSort);
+      }
       if (!_isOfflineError(e)) rethrow;
       return _readFromCache(collection, cacheFilter, cacheSort);
     }

@@ -130,7 +130,11 @@ class _WawancaraPageState extends State<WawancaraPage> {
             items: orgs.map((o) => AppDropdownItem(value: o.id, label: o.nama)).toList(),
             onChanged: (v) {
               setState(() => _selectedOrgId = v);
-              if (v != null) _subscribeSessions();
+              if (v == null) {
+                context.read<InterviewProvider>().clear();
+              } else {
+                _subscribeSessions();
+              }
             },
           ),
           const SizedBox(height: 16),
@@ -414,7 +418,6 @@ class _SessionDetailPageState extends State<_SessionDetailPage> {
     );
   }
 }
-
 
 
 

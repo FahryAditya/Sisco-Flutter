@@ -118,9 +118,13 @@ class ChatService {
     required String recipientRole,
     required String text,
     ReplyPreview? replyTo,
+    String? voiceUrl,
+    int? voiceDuration,
   }) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty) return;
+    if (trimmed.isEmpty && voiceUrl == null) return;
+
+    final displayText = voiceUrl != null ? (trimmed.isEmpty ? '[Pesan Suara]' : trimmed) : trimmed;
 
     final cid = conversationId(sender.id, recipientId);
     final ts = FieldValue.serverTimestamp();
@@ -134,11 +138,10 @@ class ChatService {
           sender.id: {'nama': sender.nama, 'role': sender.role},
           recipientId: {'nama': recipientName, 'role': recipientRole},
         },
-        'lastMessage': trimmed,
+        'lastMessage': displayText,
         'lastSenderId': sender.id,
         'lastMessageAt': ts,
         'updatedAt': ts,
-        // Penerima +1 belum dibaca; pengirim jelas sudah "membaca".
         'unread': {
           recipientId: FieldValue.increment(1),
           sender.id: 0,
@@ -149,14 +152,14 @@ class ChatService {
     );
     batch.set(_messagesRef(cid).doc(), {
       'senderId': sender.id,
-      'text': trimmed,
+      'text': displayText,
       'createdAt': ts,
       if (replyTo != null) 'replyTo': replyTo.toMap(),
+      if (voiceUrl != null) 'voiceUrl': voiceUrl,
+      if (voiceDuration != null) 'voiceDuration': voiceDuration,
     });
 
     await batch.commit();
-
-    // Bersihkan indikator mengetik milik pengirim setelah terkirim.
     await setTyping(conversationId: cid, uid: sender.id, typing: false);
   }
 

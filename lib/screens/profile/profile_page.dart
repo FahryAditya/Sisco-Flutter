@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/organization_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/character_dialog.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -22,13 +23,7 @@ class ProfilePage extends StatelessWidget {
       ])),
       const SizedBox(height: 32),
       Card(child: ListTile(leading: Icon(Icons.logout, color: AppColors.danger), title: const Text('Keluar'), onTap: () async {
-        final ok = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
-          title: const Text('Keluar'), content: const Text('Yakin ingin keluar?'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Batal')),
-            ElevatedButton(onPressed: () => Navigator.pop(c, true), child: const Text('Keluar')),
-          ],
-        ));
+        final ok = await AppDialogs.showConfirm(context, message: 'Yakin ingin keluar?', confirmLabel: 'Keluar', danger: true);
           if (ok == true && context.mounted) {
             context.read<OrganizationProvider>().clear();
             context.read<AuthProvider>().logout();

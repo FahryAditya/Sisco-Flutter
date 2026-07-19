@@ -1,13 +1,15 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:excel/excel.dart' hide Border;
 import 'package:file_picker/file_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import '../../utils/page_transitions.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/member.dart';
+import '../../services/storage_util.dart';
 import '../../models/organization.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
@@ -372,6 +374,12 @@ class _AdminPageState extends State<AdminPage> {
       'Anggota, foto, EXP, absensi, kas, penghargaan ke JSON',
       Icons.backup,
       () => _push(const BackupPage()),
+    ),
+    _AdminFeature(
+      'Hapus Data',
+      'Hapus koleksi data secara permanen',
+      Icons.delete_sweep,
+      _showClearDataDialog,
     ),
   ];
 
@@ -823,9 +831,13 @@ class _AdminPageState extends State<AdminPage> {
         if (messageC.text.trim().isEmpty) {
           throw Exception('Pesan email wajib diisi');
         }
-        final attachmentUrl = attachment == null
-            ? null
-            : await _uploadFile(attachment!, 'email_attachments');
+        String? attachmentUrl;
+        if (attachment != null) {
+          attachmentUrl = await _uploadFile(attachment!, 'email_attachments');
+          if (attachmentUrl == null) {
+            debugPrint('AdminPage: Attachment gagal diupload — dikirim tanpa lampiran');
+          }
+        }
         await FirestoreService.createEmailRequest({
           'recipient': recipient,
           'subject': subjectC.text.trim(),
@@ -1252,8 +1264,8 @@ class _AdminPageState extends State<AdminPage> {
   /// dibuat administrator. Membedakan Org vs Eskul lewat kategori.
   Widget _assignOrgsTile(Set<String> selected, StateSetter setDialogState) {
     if (_orgs.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.only(bottom: 10),
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
         child: Align(
           alignment: Alignment.centerLeft,
           child: Text(
@@ -1272,11 +1284,11 @@ class _AdminPageState extends State<AdminPage> {
             padding: const EdgeInsets.only(left: 4, bottom: 4),
             child: Row(
               children: [
-                const Icon(Icons.assignment_ind_outlined, size: 16, color: AppColors.textSecondary),
+                Icon(Icons.assignment_ind_outlined, size: 16, color: AppColors.textSecondary),
                 const SizedBox(width: 6),
                 Text(
                   'Tugaskan ke Organisasi / Eskul (${selected.length})',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                 ),
               ],
             ),
@@ -1405,14 +1417,10 @@ class _AdminPageState extends State<AdminPage> {
       throw Exception('File terlalu besar (maks 5MB)');
     }
     final safeName = file.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-    final ref = FirebaseStorage.instance.ref(
-      '$folder/${DateTime.now().millisecondsSinceEpoch}_$safeName',
-    );
-    final snapshot = await ref.putData(file.bytes!).timeout(
-      const Duration(seconds: 30),
-      onTimeout: () => throw Exception('Upload timeout (30 detik)'),
-    );
-    return snapshot.ref.getDownloadURL();
+    final path = '$folder/${DateTime.now().millisecondsSinceEpoch}_$safeName';
+    final url = await StorageUtil.uploadAndGetURL(path: path, data: file.bytes!);
+    if (url == null) throw Exception('Gagal mengunggah file ke penyimpanan');
+    return url;
   }
 
   String _slugify(String value) {
@@ -1589,6 +1597,298 @@ class _AdminPageState extends State<AdminPage> {
   void _push(Widget page) {
     Navigator.of(context).push(
       SmoothPageRoute(builder: (_) => page),
+    );
+  }
+
+  Future<void> _showClearDataDialog() async {
+    final collections = [
+      _ClearCollection('organizations', 'Organisasi', Icons.business),
+      _ClearCollection('members', 'Anggota', Icons.group),
+      _ClearCollection('attendance', 'Absensi', Icons.fact_check),
+      _ClearCollection('cash_transactions', 'Transaksi Kas', Icons.account_balance_wallet),
+      _ClearCollection('cash_expenses', 'Pengeluaran', Icons.receipt),
+      _ClearCollection('interview_sessions', 'Sesi Wawancara', Icons.record_voice_over),
+      _ClearCollection('interview_results', 'Hasil Wawancara', Icons.rate_review),
+      _ClearCollection('activity_logs', 'Log Aktivitas', Icons.history),
+      _ClearCollection('schedules', 'Jadwal', Icons.schedule),
+      _ClearCollection('daily_materials', 'Materi Kegiatan', Icons.menu_book),
+      _ClearCollection('documentation', 'Dokumentasi', Icons.photo_library),
+      _ClearCollection('achievements', 'Penghargaan', Icons.emoji_events),
+      _ClearCollection('registrations', 'Pendaftaran', Icons.approval),
+      _ClearCollection('email_requests', 'Email', Icons.mail),
+      _ClearCollection('exp_logs', 'Log EXP', Icons.trending_up),
+      _ClearCollection('announcements', 'Pengumuman', Icons.campaign),
+      _ClearCollection('students', 'Data Siswa', Icons.school),
+      _ClearCollection('app_features', 'Fitur Aplikasi', Icons.toggle_on),
+      _ClearCollection('directory', 'Buku Alamat', Icons.contacts),
+      _ClearCollection('quest_questions', 'Soal Quest', Icons.quiz),
+      _ClearCollection('quest_slots', 'Slot Quest', Icons.qr_code),
+      _ClearCollection('backup_meta', 'Backup Meta', Icons.backup),
+      _ClearCollection('conversations', 'Percakapan Chat', Icons.chat),
+    ];
+
+    final selected = <String>{};
+    bool selectAll = false;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (c) => StatefulBuilder(
+        builder: (c, setInner) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Icon(Icons.delete_sweep, color: AppColors.danger, size: 28),
+              const SizedBox(width: 12),
+              Text('Hapus Data',
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 18)),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Pilih koleksi yang akan dihapus. Tindakan ini tidak dapat dibatalkan!',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 12),
+                CheckboxListTile(
+                  title: Text('Pilih Semua', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
+                  value: selectAll,
+                  controlAffinity: ListTileControlAffinity.trailing,
+                  onChanged: (v) {
+                    setInner(() {
+                      selectAll = v ?? false;
+                      selected.clear();
+                      if (selectAll) {
+                        selected.addAll(collections.map((c) => c.name));
+                      }
+                    });
+                  },
+                ),
+                const Divider(height: 1),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 360),
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: collections.map((col) {
+                      return CheckboxListTile(
+                        dense: true,
+                        title: Text(col.label, style: GoogleFonts.plusJakartaSans(fontSize: 14)),
+                        secondary: Icon(col.icon, size: 20),
+                        value: selected.contains(col.name),
+                        controlAffinity: ListTileControlAffinity.trailing,
+                        onChanged: (v) {
+                          setInner(() {
+                            if (v == true) {
+                              selected.add(col.name);
+                              if (selected.length == collections.length) selectAll = true;
+                            } else {
+                              selected.remove(col.name);
+                              selectAll = false;
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: Text('Batal', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton.icon(
+              icon: Icon(Icons.delete_forever, size: 18),
+              label: Text('Hapus (${selected.length})'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.danger,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: selected.isEmpty ? null : () => Navigator.pop(c, true),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true || selected.isEmpty || !mounted) return;
+
+    final confirmDelete = await AppDialogs.showConfirm(
+      context,
+      message: 'Yakin ingin menghapus ${selected.length} koleksi data? Semua data di dalamnya akan hilang permanen.',
+      confirmLabel: 'Ya, Hapus',
+      cancelLabel: 'Batal',
+      danger: true,
+    );
+
+    if (confirmDelete != true || !mounted) return;
+
+    final progress = ProgressDialog(context);
+    await progress.show(selected);
+  }
+}
+
+class _ClearCollection {
+  final String name;
+  final String label;
+  final IconData icon;
+  const _ClearCollection(this.name, this.label, this.icon);
+}
+
+class ProgressDialog {
+  final BuildContext context;
+  ProgressDialog(this.context);
+
+  Future<void> show(Set<String> selected) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (c) => _ProgressContent(selected: selected),
+    );
+  }
+}
+
+class _ProgressContent extends StatefulWidget {
+  final Set<String> selected;
+  const _ProgressContent({required this.selected});
+
+  @override
+  State<_ProgressContent> createState() => _ProgressContentState();
+}
+
+class _ProgressContentState extends State<_ProgressContent> {
+  int _done = 0;
+  int _total = 0;
+  String _current = '';
+  String _error = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _total = widget.selected.length;
+    _run();
+  }
+
+  Future<void> _run() async {
+    for (final name in widget.selected) {
+      if (!mounted) return;
+      setState(() => _current = 'Menghapus $name...');
+      try {
+        await _deleteCollection(name);
+        setState(() => _done++);
+      } catch (e) {
+        setState(() => _error += 'Gagal menghapus $name: $e\n');
+      }
+    }
+    if (!mounted) return;
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    Navigator.pop(context);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_error.isEmpty
+            ? 'Berhasil menghapus $_done dari $_total koleksi'
+            : '$_done/$_total selesai. $_error'),
+        backgroundColor: _error.isEmpty ? AppColors.success : AppColors.warning,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _deleteCollection(String name) async {
+    final db = FirebaseFirestore.instance;
+    final ref = db.collection(name);
+
+    if (name == 'conversations') {
+      final snap = await ref.get();
+      for (final doc in snap.docs) {
+        final subRef = doc.reference.collection('messages');
+        final msgSnap = await subRef.get();
+        while (true) {
+          final batch = db.batch();
+          for (final msg in msgSnap.docs) {
+            batch.delete(msg.reference);
+          }
+          await batch.commit();
+          final remaining = await subRef.limit(500).get();
+          if (remaining.docs.isEmpty) break;
+          for (final msg in remaining.docs) {
+            batch.delete(msg.reference);
+          }
+          await batch.commit();
+        }
+        await doc.reference.delete();
+      }
+      return;
+    }
+
+    if (name == 'members') {
+      final snap = await ref.get();
+      for (final doc in snap.docs) {
+        final subRef = doc.reference.collection('achievements');
+        final subSnap = await subRef.get();
+        for (final sub in subSnap.docs) {
+          await sub.reference.delete();
+        }
+      }
+    }
+
+    if (name == 'interview_sessions') {
+      final snap = await ref.get();
+      for (final doc in snap.docs) {
+        for (final sub in ['queues', 'chats', 'qr_tokens']) {
+          final subSnap = await doc.reference.collection(sub).get();
+          for (final subDoc in subSnap.docs) {
+            await subDoc.reference.delete();
+          }
+        }
+      }
+    }
+
+    while (true) {
+      final docs = await ref.limit(500).get();
+      if (docs.docs.isEmpty) break;
+      final batch = db.batch();
+      for (final doc in docs.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      content: SizedBox(
+        width: 280,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(strokeWidth: 2.5),
+            const SizedBox(height: 20),
+            Text('Menghapus Data...',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 16)),
+            const SizedBox(height: 8),
+            Text('$_done dari $_total selesai',
+              style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppColors.textSecondary)),
+            const SizedBox(height: 4),
+            Text(_current,
+              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.textHint)),
+            if (_error.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(_error, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.danger)),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

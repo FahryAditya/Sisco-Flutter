@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/exp_helper.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/biometric_service.dart';
+import '../../widgets/biometric_offer_dialog.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -38,7 +40,6 @@ class _LoginPageState extends State<LoginPage>
       begin: const Offset(0, 0.12),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _introC, curve: Curves.easeOutCubic));
-    // Repaint fields when focus changes (for the glow effect).
     _emailFocus.addListener(() => setState(() {}));
     _passFocus.addListener(() => setState(() {}));
     _introC.forward();
@@ -60,36 +61,41 @@ class _LoginPageState extends State<LoginPage>
       return;
     }
     FocusScope.of(context).unfocus();
-    // Ambil referensi sebelum await: saat login sukses, AuthGate langsung
-    // mengganti halaman ini sehingga context bisa tidak valid lagi.
     final auth = context.read<AuthProvider>();
-    final messenger = ScaffoldMessenger.of(context);
 
     setState(() => _loading = true);
     final ok = await auth.login(_emailC.text.trim(), _passC.text);
 
+    if (!mounted) return;
+
     if (ok) {
-      final nama = auth.user?.nama.trim();
+      final messenger = ScaffoldMessenger.of(context);
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
             content: Text(
-              (nama == null || nama.isEmpty)
+              auth.user?.nama == null || auth.user!.nama.trim().isEmpty
                   ? 'Selamat Datang!'
-                  : 'Selamat Datang, $nama',
+                  : 'Selamat Datang, ${auth.user!.nama}',
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
           ),
         );
-      return; // Halaman akan diganti oleh AuthGate.
+
+      final bio = BiometricService.instance;
+      if (bio.isAvailable && bio.isEnrolled) {
+        final enabled = await bio.isEnabled();
+        if (mounted && !enabled && auth.user?.id != null) {
+          showBiometricOffer(context, uid: auth.user!.id);
+        }
+      }
+      return;
     }
 
-    if (!mounted) return;
     setState(() => _loading = false);
-    // Tampilkan pesan spesifik dari provider bila ada (mis. akun siswa),
-    // selain itu pesan umum email/password salah.
     final err = auth.error;
     _showError((err != null && err.toLowerCase().contains('siswa'))
         ? err
@@ -112,7 +118,6 @@ class _LoginPageState extends State<LoginPage>
       backgroundColor: const Color(0xFF000B18),
       body: Stack(
         children: [
-          // Ambient gradient background
           const Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -129,7 +134,6 @@ class _LoginPageState extends State<LoginPage>
               ),
             ),
           ),
-          // Soft glow orbs
           _glowOrb(
             top: -80,
             left: -60,
@@ -148,7 +152,6 @@ class _LoginPageState extends State<LoginPage>
             size: 200,
             color: const Color(0xFF2D7DFF).withValues(alpha: 0.25),
           ),
-          // Content
           SafeArea(
             child: Center(
               child: SingleChildScrollView(

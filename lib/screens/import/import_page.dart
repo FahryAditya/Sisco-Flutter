@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:archive/archive.dart';
+import 'package:xml/xml.dart';
 import 'package:excel/excel.dart' hide Border;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/organization_provider.dart';
@@ -13,6 +15,7 @@ import '../../services/firestore_service.dart';
 import '../../utils/kelas_helper.dart';
 import '../../widgets/gradient_app_bar.dart';
 import '../../widgets/app_dropdown.dart';
+import '../../widgets/character_dialog.dart';
 
 class ImportError {
   final int rowNumber;
@@ -98,10 +101,23 @@ class _ImportPageState extends State<ImportPage> {
         rows = _parseExcel(file.bytes!);
       }
       setState(() => _parsedRows = rows);
-    } catch (e) {
+    } catch (e, stack) {
       setState(() => _error = 'Gagal membaca file: $e');
+      debugPrint('ImportPage._pickFile error: $e\n$stack');
     }
     setState(() => _loading = false);
+  }
+
+  void _splitNamaKelas(Map<String, String?> row) {
+    final nama = row['nama'];
+    final kelas = row['kelas'];
+    if (nama == null || kelas != null || nama.isEmpty) return;
+    final tingkat = RegExp(r'\b(X|XI|XII|10|11|12)\b');
+    final match = tingkat.firstMatch(nama.toUpperCase());
+    if (match == null) return;
+    final splitAt = match.start;
+    row['nama'] = nama.substring(0, splitAt).trim();
+    row['kelas'] = nama.substring(splitAt).trim();
   }
 
   List<Map<String, String?>> _parseCsv(Uint8List bytes) {
@@ -112,6 +128,7 @@ class _ImportPageState extends State<ImportPage> {
 
     final headers = lines[0].split(',').map((h) => h.trim().toLowerCase()).toList();
     final colMap = _mapColumns(headers);
+    final combined = colMap['nama'] == colMap['kelas'];
 
     final rows = <Map<String, String?>>[];
     for (var i = 1; i < lines.length; i++) {
@@ -121,47 +138,123 @@ class _ImportPageState extends State<ImportPage> {
         final idx = headers.indexOf(entry.value);
         row[entry.key] = idx >= 0 && idx < values.length ? values[idx] : null;
       }
+      if (combined) _splitNamaKelas(row);
       if ((row['nama'] ?? '').trim().isNotEmpty) rows.add(row);
     }
     return rows;
   }
 
+  /// Some xlsx files store relationship paths as absolute (`/xl/worksheets/sheet1.xml`)
+  /// but the excel package expects relative (`xl/worksheets/sheet1.xml`) and prepends `xl/`,
+  /// causing `findFile('xl//xl/worksheets/sheet1.xml')` → null → null-assertion crash.
+  /// This method strips the leading `/` so the package can find the worksheet file.
+  Uint8List _fixExcelRelsPaths(Uint8List bytes) {
+    try {
+      final archive = ZipDecoder().decodeBytes(bytes);
+      bool patched = false;
+
+      final relsFile = archive.findFile('xl/_rels/workbook.xml.rels');
+      if (relsFile != null) {
+        relsFile.decompress();
+        final content = utf8.decode(relsFile.content);
+        final doc = XmlDocument.parse(content);
+
+        for (final rel in doc.findAllElements('Relationship')) {
+          final target = rel.getAttribute('Target');
+          if (target != null && target.startsWith('/')) {
+            // Strip leading "/" — the package already prepends "xl/"
+            // e.g. "/xl/worksheets/sheet1.xml" -> "xl/worksheets/sheet1.xml"
+            //      (package builds "xl/xl/worksheets/sheet1.xml" — wrong)
+            // Strip leading "/" AND "xl/" prefix if present
+            // e.g. "/xl/worksheets/sheet1.xml" -> "worksheets/sheet1.xml"
+            //      (package builds "xl/worksheets/sheet1.xml" — correct)
+            var fixed = target.substring(1);
+            if (fixed.startsWith('xl/')) {
+              fixed = fixed.substring(3);
+            }
+            rel.setAttribute('Target', fixed);
+            patched = true;
+          }
+        }
+
+        if (patched) {
+          final newBytes = utf8.encode(doc.toXmlString());
+          archive.addFile(ArchiveFile('xl/_rels/workbook.xml.rels', newBytes.length, newBytes));
+        }
+      }
+
+      if (!patched) return bytes;
+
+      final outList = ZipEncoder().encode(archive);
+      if (outList != null) return Uint8List.fromList(outList);
+      return bytes;
+    } catch (_) {
+      return bytes;
+    }
+  }
+
   String _getCellValueString(CellValue? cellValue) {
     if (cellValue == null) return '';
-    return switch (cellValue) {
-      TextCellValue(value: final v) => v.toString(),
-      IntCellValue(value: final v) => v.toString(),
-      DoubleCellValue(value: final v) => v.toString(),
-      BoolCellValue(value: final v) => v.toString(),
-      FormulaCellValue(formula: final f) => f.toString(),
-      _ => cellValue.toString(),
-    };
+    try {
+      return cellValue.toString();
+    } catch (_) {
+      return '';
+    }
   }
 
   List<Map<String, String?>> _parseExcel(Uint8List bytes) {
-    final excel = Excel.decodeBytes(bytes);
-    if (excel.tables.isEmpty) throw Exception('File Excel kosong');
+    final fixed = _fixExcelRelsPaths(bytes);
+    final excel = Excel.decodeBytes(fixed);
+    if (excel.tables.isEmpty) throw Exception('File Excel tidak memiliki sheet');
 
-    final sheet = excel.tables.values.first;
-    if (sheet.rows.isEmpty) throw Exception('Sheet kosong');
-    if (sheet.rows.length < 2) throw Exception('File harus memiliki header dan minimal 1 baris data');
+    final sheetName = excel.tables.keys.first;
+    final sheet = excel.tables[sheetName];
+    if (sheet == null) throw Exception('Sheet "$sheetName" tidak dapat dibaca');
+
+    if (sheet.rows.isEmpty) throw Exception('Sheet "$sheetName" kosong');
+    if (sheet.rows.length < 2) {
+      throw Exception('File harus memiliki header dan minimal 1 baris data');
+    }
 
     final headerRow = sheet.rows[0];
-    final headers = headerRow
-        .map((c) => _getCellValueString(c?.value).trim().toLowerCase())
-        .toList();
+    final headers = <String>[];
+    for (var c = 0; c < headerRow.length; c++) {
+      final cell = headerRow[c];
+      final val = cell?.value;
+      headers.add(_getCellValueString(val).trim().toLowerCase());
+    }
+
     final colMap = _mapColumns(headers);
+    if (!colMap.containsKey('nama')) {
+      throw Exception(
+        'Kolom "Nama" tidak ditemukan di header. '
+        'Pastikan file memiliki kolom "Nama", "Kelas", dll.',
+      );
+    }
+    final combined = colMap['nama'] == colMap['kelas'];
 
     final rows = <Map<String, String?>>[];
     for (var i = 1; i < sheet.rows.length; i++) {
-      final rowData = sheet.rows[i];
-      final row = <String, String?>{};
-      for (final entry in colMap.entries) {
-        final idx = headers.indexOf(entry.value);
-        row[entry.key] =
-            idx >= 0 && idx < rowData.length ? _getCellValueString(rowData[idx]?.value).trim() : null;
+      try {
+        final rowData = sheet.rows[i];
+        if (rowData.isEmpty) continue;
+
+        final row = <String, String?>{};
+        for (final entry in colMap.entries) {
+          final idx = headers.indexOf(entry.value);
+          if (idx < 0 || idx >= rowData.length) {
+            row[entry.key] = null;
+            continue;
+          }
+          final cell = rowData[idx];
+          final val = cell?.value;
+          row[entry.key] = _getCellValueString(val).trim();
+        }
+        if (combined) _splitNamaKelas(row);
+        if ((row['nama'] ?? '').isNotEmpty) rows.add(row);
+      } catch (e) {
+        debugPrint('ImportPage._parseExcel row $i error: $e');
       }
-      if ((row['nama'] ?? '').isNotEmpty) rows.add(row);
     }
     return rows;
   }
@@ -169,15 +262,29 @@ class _ImportPageState extends State<ImportPage> {
   Map<String, String> _mapColumns(List<String> headers) {
     final map = <String, String>{};
     for (final h in headers) {
-      if (h.contains('nama')) {
+      final hl = h.toLowerCase().trim();
+      if (!hl.contains('nama') && !hl.contains('kelas') && !hl.contains('nis') && !hl.contains('email') && !hl.contains('jabatan') && !hl.contains('posisi') && !hl.contains('induk')) {
+        continue;
+      }
+
+      final isNama = hl.contains('nama');
+      final isKelas = hl.contains('kelas');
+      final isNis = hl.contains('nis') || hl.contains('induk');
+      final isEmail = hl.contains('email') || hl.contains('gmail');
+      final isJabatan = hl.contains('jabatan') || hl.contains('posisi');
+
+      if (isNama && isKelas) {
+        if (!map.containsKey('nama')) map['nama'] = h;
+        if (!map.containsKey('kelas')) map['kelas'] = h;
+      } else if (isNama && !map.containsKey('nama')) {
         map['nama'] = h;
-      } else if (h.contains('kelas')) {
+      } else if (isKelas && !map.containsKey('kelas')) {
         map['kelas'] = h;
-      } else if (h.contains('nis') || h.contains('no_induk') || h.contains('induk')) {
+      } else if (isNis && !map.containsKey('nis')) {
         map['nis'] = h;
-      } else if (h.contains('email') || h.contains('gmail')) {
+      } else if (isEmail && !map.containsKey('email')) {
         map['email'] = h;
-      } else if (h.contains('jabatan') || h.contains('posisi')) {
+      } else if (isJabatan && !map.containsKey('jabatan')) {
         map['jabatan'] = h;
       }
     }
@@ -235,20 +342,7 @@ class _ImportPageState extends State<ImportPage> {
 
   Future<void> _deleteRow(int index) async {
     final row = _parsedRows[index];
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus baris?'),
-        content: Text('Baris ${index + 1} (${row['nama'] ?? '-'}) akan dihapus dari daftar import.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Hapus', style: TextStyle(color: AppColors.danger)),
-          ),
-        ],
-      ),
-    );
+    final confirm = await AppDialogs.showConfirm(context, message: 'Baris ${index + 1} (${row['nama'] ?? '-'}) akan dihapus dari daftar import.', confirmLabel: 'Hapus', danger: true);
     if (confirm != true) return;
     setState(() {
       _parsedRows.removeAt(index);

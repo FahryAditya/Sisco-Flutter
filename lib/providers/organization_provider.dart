@@ -23,6 +23,17 @@ class OrganizationProvider extends ChangeNotifier {
   bool get loading => _loading;
   bool get orgsLoaded => _orgsLoaded;
 
+  void _reconcileSelection() {
+    final selectedId = _selectedOrg?.id;
+    final selectionStillExists =
+        selectedId != null && _orgs.any((org) => org.id == selectedId);
+    if (_orgs.isEmpty || !selectionStillExists) {
+      _selectedOrg = null;
+      _members = [];
+      _membersOrgId = null;
+    }
+  }
+
   /// Memberi tahu listener dengan aman. Bila dipanggil saat frame sedang di-build
   /// (mis. `loadOrgs()` dipanggil sinkron dari `initState`), notifikasi ditunda
   /// hingga frame selesai untuk menghindari error
@@ -61,9 +72,11 @@ class OrganizationProvider extends ChangeNotifier {
           forceRefresh: force,
         );
       }
+      _reconcileSelection();
       _orgsLoaded = true;
     } catch (_) {
       _orgs = [];
+      _reconcileSelection();
     }
     _loading = false;
     _safeNotify();
@@ -79,6 +92,12 @@ class OrganizationProvider extends ChangeNotifier {
       return;
     }
     _selectedOrg = await FirestoreService.getOrganization(orgId, forceRefresh: force);
+    if (_selectedOrg == null) {
+      _members = [];
+      _membersOrgId = null;
+      _safeNotify();
+      return;
+    }
     _members = await FirestoreService.getMembers(orgId, forceRefresh: force);
     _membersOrgId = orgId;
     _safeNotify();

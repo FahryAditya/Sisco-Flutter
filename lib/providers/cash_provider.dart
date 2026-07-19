@@ -21,6 +21,19 @@ class CashProvider extends ChangeNotifier {
   bool get loading => _loading;
   int get errorCode => _errorCode;
 
+  void clear() {
+    _cancelSubs();
+    _transactions = [];
+    _expenses = [];
+    _balance = 0;
+    _loading = false;
+    _currentOrgId = null;
+    _errorCode = 0;
+    _txLoaded = false;
+    _exLoaded = false;
+    notifyListeners();
+  }
+
   void _recalculateBalance() {
     int totalTx = 0;
     for (final t in _transactions) {

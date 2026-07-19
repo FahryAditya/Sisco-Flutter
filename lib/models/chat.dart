@@ -220,17 +220,13 @@ class ChatMessage {
   final String text;
   final DateTime createdAt;
 
-  /// Pesan yang di-quote (opsional).
   final ReplyPreview? replyTo;
-
-  /// Reaksi emoji: `{emoji: [uid, ...]}`.
   final Map<String, List<String>> reactions;
-
-  /// Waktu terakhir diedit (null bila belum pernah).
   final DateTime? editedAt;
-
-  /// True bila pesan sudah dihapus (soft delete).
   final bool deleted;
+
+  final String? voiceUrl;
+  final int? voiceDuration;
 
   ChatMessage({
     required this.id,
@@ -241,6 +237,8 @@ class ChatMessage {
     this.reactions = const {},
     this.editedAt,
     this.deleted = false,
+    this.voiceUrl,
+    this.voiceDuration,
   });
 
   factory ChatMessage.fromMap(Map<String, dynamic> map, String docId) {
@@ -264,8 +262,11 @@ class ChatMessage {
       reactions: reactions,
       editedAt: (map['editedAt'] as Timestamp?)?.toDate(),
       deleted: map['deleted'] as bool? ?? false,
+      voiceUrl: map['voiceUrl'] as String?,
+      voiceDuration: map['voiceDuration'] as int?,
     );
   }
 
   bool get isEdited => editedAt != null;
+  bool get isVoice => voiceUrl != null && voiceUrl!.isNotEmpty;
 }

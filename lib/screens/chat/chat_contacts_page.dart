@@ -144,7 +144,7 @@ class _ChatContactsPageState extends State<ChatContactsPage> {
         style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
       ),
       subtitle: Text(u.isOnlineNow ? 'Online' : _roleDisplay(u.role)),
-      trailing: const Icon(Icons.chevron_right, color: AppColors.textHint),
+      trailing: Icon(Icons.chevron_right, color: AppColors.textHint),
       onTap: () {
         Navigator.pushReplacement(
           context,

@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/theme_provider.dart';
 import 'screens/splash/splash_screen.dart';
+import 'screens/auth/biometric_gate.dart';
 import 'screens/login/login_page.dart';
 import 'screens/home/home_page.dart';
 import 'screens/chat/chat_room_page.dart';
+import 'services/biometric_service.dart';
 import 'services/notification_service.dart';
 
 class SISCOApp extends StatefulWidget {
@@ -19,9 +22,6 @@ class _SISCOAppState extends State<SISCOApp> {
   @override
   void initState() {
     super.initState();
-    // Handler saat user menekan notifikasi chat: buka ruang percakapan.
-    // Memakai NavigatorState global (di-set via navigatorKey di MaterialApp)
-    // supaya bisa push dari luar konteks widget.
     NotificationService.instance.onChatTap = (payload) {
       final nav = NotificationService.navigatorKey.currentState;
       if (nav == null) return;
@@ -39,10 +39,11 @@ class _SISCOAppState extends State<SISCOApp> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
     return MaterialApp(
       title: 'SISCO',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.lightTheme(accentColor: theme.accentColor),
       navigatorKey: NotificationService.navigatorKey,
       home: const AuthGate(),
     );
@@ -57,6 +58,8 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
+  bool _biometricChecked = false;
+
   @override
   void initState() {
     super.initState();
@@ -65,13 +68,30 @@ class _AuthGateState extends State<AuthGate> {
     });
   }
 
+  Future<void> _checkBiometricGate() async {
+    final enabled = await BiometricService.instance.isEnabled();
+    if (!mounted || !enabled) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const BiometricGate()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, auth, _) {
         if (auth.loading) return const SplashScreen();
-        if (auth.isLoggedIn) return const HomePage();
-        return const LoginPage();
+        if (!auth.isLoggedIn) return const LoginPage();
+
+        if (!_biometricChecked) {
+          _biometricChecked = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _checkBiometricGate();
+          });
+        }
+
+        return const HomePage();
       },
     );
   }

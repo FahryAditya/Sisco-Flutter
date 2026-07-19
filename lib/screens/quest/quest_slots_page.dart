@@ -419,7 +419,7 @@ class _ManageQuestionsDialogState extends State<_ManageQuestionsDialog> {
               alignment: Alignment.centerLeft,
               child: Text(
                 '${_chosen.length} soal dipilih',
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 12, color: AppColors.textSecondary),
               ),
             ),

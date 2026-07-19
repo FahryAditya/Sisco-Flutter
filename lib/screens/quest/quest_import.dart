@@ -223,7 +223,7 @@ class _ImportDialogState extends State<_ImportDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Pilih file .json berisi array soal. Tiap soal minimal '
                   'punya "kode" dan "pertanyaan".',
                   style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
@@ -276,7 +276,7 @@ class _ImportDialogState extends State<_ImportDialog> {
                       ),
                   if (_errors.length > 10)
                     Text('… dan ${_errors.length - 10} lainnya',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 12, color: AppColors.textHint)),
                 ],
               ],

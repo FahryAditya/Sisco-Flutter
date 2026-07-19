@@ -145,13 +145,7 @@ class _PencapaianPageState extends State<PencapaianPage> with SingleTickerProvid
 
   Future<void> _deleteAchievement(String id) async {
     final user = context.read<AuthProvider>().user;
-    final ok = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
-      title: const Text('Hapus'), content: const Text('Yakin?'),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Batal')),
-        ElevatedButton(onPressed: () => Navigator.pop(c, true), style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger), child: const Text('Hapus')),
-      ],
-    ));
+    final ok = await AppDialogs.showConfirm(context, message: 'Yakin?', confirmLabel: 'Hapus', danger: true);
     if (ok == true) {
       if (!mounted) return;
       AppDialogs.showLoading(context, kind: LoadingKind.sinkronasi);

@@ -20,6 +20,7 @@ class KelasHelper {
     'TJKT': [1, 2],
     'MPLB': [1, 2],
     'DKV': [],
+    'AKL': [],
     'KESEHATAN': [1, 2, 3, 4, 5, 6],
     'TLM': [],
     'FARMASI': [],
@@ -50,7 +51,7 @@ class KelasHelper {
   }
 
   /// Beberapa contoh kelas yang benar-benar ada (untuk pesan bantuan).
-  static String get contohKelas => 'X PPLG, XI TJKT 2, XII KESEHATAN 3';
+  static String get contohKelas => 'X PPLG, XI AKL, XII KESEHATAN 3';
 
   /// Pisahkan input mentah menjadi (tingkat, jurusan, rombel).
   /// Mengembalikan null jika struktur dasar tidak terpenuhi.

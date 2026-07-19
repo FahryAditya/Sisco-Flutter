@@ -134,6 +134,18 @@ class _AbsensiPageState extends State<AbsensiPage> {
     });
   }
 
+  void _clearSelectedOrg() {
+    _membersSub?.cancel();
+    _attSub?.cancel();
+    setState(() {
+      _selectedOrgId = null;
+      _members = [];
+      _filteredMembers = [];
+      _attendanceMap = {};
+      _loading = false;
+    });
+  }
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -197,7 +209,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
 
   @override
   Widget build(BuildContext context) {
-    final orgs = context.read<OrganizationProvider>().orgs;
+    final orgs = context.watch<OrganizationProvider>().orgs;
 
     return Scaffold(
       appBar: AppBar(
@@ -240,8 +252,12 @@ class _AbsensiPageState extends State<AbsensiPage> {
                 AppDropdown<String>(label: 'Organisasi', icon: Icons.business_outlined, value: _selectedOrgId,
                   items: orgs.map((o) => AppDropdownItem(value: o.id, label: o.nama)).toList(),
                   onChanged: (v) {
+                    if (v == null) {
+                      _clearSelectedOrg();
+                      return;
+                    }
                     setState(() => _selectedOrgId = v);
-                    if (v != null) _subscribeStreams(v);
+                    _subscribeStreams(v);
                   },
                 ).animateEntrance(index: 1, baseDelay: const Duration(milliseconds: 100)),
                 const SizedBox(height: 8),
@@ -256,7 +272,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.calendar_today, size: 18, color: AppColors.textSecondary),
+                        Icon(Icons.calendar_today, size: 18, color: AppColors.textSecondary),
                         const SizedBox(width: 12),
                         Text(
                           Formatters.formatDate(_selectedDate),
@@ -273,10 +289,10 @@ class _AbsensiPageState extends State<AbsensiPage> {
                   decoration: InputDecoration(
                     labelText: 'Cari nama anggota',
                     hintText: 'Masukkan nama atau kelas...',
-                    prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
+                    prefixIcon: Icon(Icons.search, color: AppColors.textSecondary),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear, color: AppColors.textSecondary),
+                            icon: Icon(Icons.clear, color: AppColors.textSecondary),
                             onPressed: () {
                               _searchController.clear();
                             },
@@ -658,5 +674,4 @@ class _AbsensiPageState extends State<AbsensiPage> {
     );
   }
 }
-
 

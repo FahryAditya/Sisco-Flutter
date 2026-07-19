@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/organization_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_theme.dart';
@@ -33,7 +34,14 @@ class _ApprovalPageState extends State<ApprovalPage> {
       final list = await FirestoreService.getRegistrations(orgId: _selectedOrgId);
       if (mounted) setState(() { _registrations = list; _loading = false; });
     } catch (e) {
-      if (mounted) { setState(() => _loading = false); await AppDialogs.showError(context, 'Gagal memuat pendaftaran: $e'); }
+      if (mounted) {
+        setState(() => _loading = false);
+        final msg = e is FirebaseException && e.code == 'failed-precondition'
+            ? 'Gagal memuat pendaftaran. Sistem membutuhkan konfigurasi database tambahan. Hubungi administrator.'
+            : 'Gagal memuat pendaftaran. Periksa koneksi dan coba lagi.';
+        debugPrint('ApprovalPage error: ${e.runtimeType} — ${e.toString()}');
+        await AppDialogs.showError(context, msg);
+      }
     }
   }
 

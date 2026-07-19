@@ -8,9 +8,11 @@ class AppColors {
   static const Color accent = Color(0xFFFF6B35);
   static const Color background = Color(0xFFF5F7FA);
   static const Color surface = Colors.white;
-  static const Color textPrimary = Color(0xFF1A1D21);
-  static const Color textSecondary = Color(0xFF6B7280);
-  static const Color textHint = Color(0xFF9CA3AF);
+
+  static const Color textPrimary = Color(0xFF000000);
+  static const Color textSecondary = Color(0xFF000000);
+  static const Color textHint = Color(0xFF000000);
+
   static const Color border = Color(0xFFE5E7EB);
   static const Color danger = Color(0xFFE74C3C);
   static const Color success = Color(0xFF2ECC71);
@@ -72,16 +74,17 @@ class AppColors {
 }
 
 class AppTheme {
-  static ThemeData get lightTheme {
+  static ThemeData lightTheme({Color? accentColor}) {
+    final accent = accentColor ?? AppColors.primary;
     final base = ThemeData.light();
     return base.copyWith(
       scaffoldBackgroundColor: AppColors.background,
       colorScheme: base.colorScheme.copyWith(
-        primary: AppColors.primary,
+        primary: accent,
         secondary: AppColors.secondary,
         surface: AppColors.surface,
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: AppColors.appBarBackground,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
@@ -103,7 +106,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: accent,
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -116,8 +119,8 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
-          side: const BorderSide(color: AppColors.primary),
+          foregroundColor: accent,
+          side: BorderSide(color: accent),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
@@ -136,7 +139,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          borderSide: BorderSide(color: accent, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
@@ -146,7 +149,7 @@ class AppTheme {
         labelStyle: GoogleFonts.plusJakartaSans(color: AppColors.textSecondary),
       ),
       chipTheme: ChipThemeData(
-        selectedColor: AppColors.primary,
+        selectedColor: accent,
         secondarySelectedColor: AppColors.primaryLight,
         brightness: Brightness.light,
       ),
@@ -175,7 +178,7 @@ class AppTheme {
             return GoogleFonts.plusJakartaSans(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: AppColors.primary,
+              color: accent,
             );
           }
           return GoogleFonts.plusJakartaSans(

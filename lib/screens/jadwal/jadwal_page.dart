@@ -28,6 +28,13 @@ class _JadwalPageState extends State<JadwalPage> {
   }
 
   Future<void> _load() async {
+    if (_selectedOrgId == null) {
+      setState(() {
+        _schedules = [];
+        _loading = false;
+      });
+      return;
+    }
     setState(() => _loading = true);
     try {
       final snap = await FirestoreService.schedulesRef.where('organizationId', isEqualTo: _selectedOrgId).orderBy('tanggal', descending: true).get();
@@ -58,4 +65,3 @@ class _JadwalPageState extends State<JadwalPage> {
     ]));
   }
 }
-

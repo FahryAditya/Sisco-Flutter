@@ -12,8 +12,10 @@ import 'providers/organization_provider.dart';
 import 'providers/cash_provider.dart';
 import 'providers/interview_provider.dart';
 import 'providers/quest_provider.dart';
+import 'providers/theme_provider.dart';
 import 'services/sync_service.dart';
 import 'services/notification_service.dart';
+import 'services/biometric_service.dart';
 import 'app.dart';
 
 void main() async {
@@ -75,11 +77,21 @@ void main() async {
     debugPrint('NotificationService gagal diinisialisasi: $e');
   }
 
+  // Inisialisasi biometrik untuk login cepat.
+  try {
+    await BiometricService.instance.init();
+  } catch (e) {
+    debugPrint('BiometricService gagal diinisialisasi: $e');
+  }
+
   try {
     await initializeDateFormatting('id_ID', null);
   } catch (e) {
     debugPrint('initializeDateFormatting gagal: $e');
   }
+
+  final themeProvider = ThemeProvider();
+  await themeProvider.init();
 
   runApp(
     MultiProvider(
@@ -89,6 +101,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => CashProvider()),
         ChangeNotifierProvider(create: (_) => InterviewProvider()),
         ChangeNotifierProvider(create: (_) => QuestProvider()),
+        ChangeNotifierProvider.value(value: themeProvider),
       ],
       child: const SISCOApp(),
     ),

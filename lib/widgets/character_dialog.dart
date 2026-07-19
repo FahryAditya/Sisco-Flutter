@@ -30,6 +30,7 @@ class AppDialogs {
   static const String _imgSinkronasi = 'assets/images/sinkronasi.jpeg';
   static const String _imgBerhasil = 'assets/images/berhasil.jpeg';
   static const String _imgEror = 'assets/images/eror.jpeg';
+  static const String _imgMenentukan = 'assets/images/menentukan.jpeg';
 
   /// Menandai bahwa sebuah dialog loading sedang tampil, agar [hide] tidak
   /// keliru menutup route lain saat dipanggil ganda.
@@ -187,7 +188,7 @@ class AppDialogs {
   /// Tampilkan dialog konfirmasi (mis. sebelum aksi berat/berisiko).
   ///
   /// Mengembalikan `true` bila pengguna menekan tombol konfirmasi, selain itu
-  /// `false`. Memakai karakter `mencaridata` agar seragam dengan dialog lain.
+  /// `false`. Memakai karakter `menentukan` agar seragam dengan dialog lain.
   /// [danger] mengubah warna tombol konfirmasi menjadi merah untuk aksi merusak.
   static Future<bool> showConfirm(
     BuildContext context, {
@@ -202,7 +203,7 @@ class AppDialogs {
       barrierDismissible: false,
       useRootNavigator: true,
       builder: (dialogContext) => _CharacterCard(
-        image: _imgCariData,
+        image: _imgMenentukan,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -323,7 +324,7 @@ class _CharacterCard extends StatelessWidget {
                 width: 160,
                 height: 160,
                 fit: BoxFit.cover,
-                errorBuilder: (_, e, s) => const SizedBox(
+                errorBuilder: (_, e, s) => SizedBox(
                   width: 160,
                   height: 160,
                   child: Icon(Icons.image_not_supported_outlined,

@@ -16,6 +16,17 @@ class InterviewProvider extends ChangeNotifier {
   List<InterviewQueue> get queues => _queues;
   bool get loading => _loading;
 
+  void clear() {
+    _sesiSub?.cancel();
+    _queueSub?.cancel();
+    _sessions = [];
+    _queues = [];
+    _loading = false;
+    _currentOrgId = null;
+    _currentSesiId = null;
+    notifyListeners();
+  }
+
   void subscribeSessions(String orgId) {
     if (_currentOrgId == orgId) return;
     _currentOrgId = orgId;

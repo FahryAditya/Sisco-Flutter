@@ -122,7 +122,7 @@ class QuestQuestionsPage extends StatelessWidget {
                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
             if (!q.aktif) ...[
               const SizedBox(width: 8),
-              const Icon(Icons.visibility_off_outlined,
+              Icon(Icons.visibility_off_outlined,
                   size: 14, color: AppColors.textHint),
             ],
           ],

@@ -104,8 +104,8 @@ class QuestActivation {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 12),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
                         child: Text(
                           'Pilih pemegang akses (menu quest muncul di app '
                           'mereka) dan organisasi peserta (2–6 organisasi).',
@@ -199,8 +199,8 @@ class QuestActivation {
     StateSetter setDialogState,
   ) {
     if (users.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.only(bottom: 10),
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
         child: Align(
           alignment: Alignment.centerLeft,
           child: Text(
@@ -219,7 +219,7 @@ class QuestActivation {
             padding: const EdgeInsets.only(left: 4, bottom: 4),
             child: Row(
               children: [
-                const Icon(Icons.verified_user_outlined,
+                Icon(Icons.verified_user_outlined,
                     size: 16, color: AppColors.textSecondary),
                 const SizedBox(width: 6),
                 Text(
@@ -270,8 +270,8 @@ class QuestActivation {
     StateSetter setDialogState,
   ) {
     if (orgs.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.only(bottom: 10),
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
         child: Align(
           alignment: Alignment.centerLeft,
           child: Text(
@@ -292,7 +292,7 @@ class QuestActivation {
             padding: const EdgeInsets.only(left: 4, bottom: 4),
             child: Row(
               children: [
-                const Icon(Icons.groups_outlined,
+                Icon(Icons.groups_outlined,
                     size: 16, color: AppColors.textSecondary),
                 const SizedBox(width: 6),
                 Text(

@@ -203,13 +203,7 @@ class _DokumentasiPageState extends State<DokumentasiPage> {
 
   Future<void> _delete(String id) async {
     final user = context.read<AuthProvider>().user;
-    final ok = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
-      title: const Text('Hapus'), content: const Text('Yakin ingin menghapus?'),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Batal')),
-        ElevatedButton(onPressed: () => Navigator.pop(c, true), style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger), child: const Text('Hapus', style: TextStyle(color: Colors.white))),
-      ],
-    ));
+    final ok = await AppDialogs.showConfirm(context, message: 'Yakin ingin menghapus?', confirmLabel: 'Hapus', danger: true);
     if (ok == true) {
       if (!mounted) return;
       AppDialogs.showLoading(context, kind: LoadingKind.sinkronasi);

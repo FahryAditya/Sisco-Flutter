@@ -6,6 +6,12 @@
 	<true/>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Menyimpan gambar QR ke galeri foto Anda.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Gunakan Face ID untuk login cepat tanpa password.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Merekam pesan suara di chat staff.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Melacak lokasi kegiatan ekstrakurikuler secara real-time.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

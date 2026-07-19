@@ -27,10 +27,13 @@ import '../rekap_absensi/rekap_absensi_page.dart';
 import '../dokumentasi/dokumentasi_page.dart';
 import '../log_aktivitas/log_aktivitas_page.dart';
 import '../pencapaian/pencapaian_page.dart';
+import '../../widgets/character_dialog.dart';
 import '../export/export_page.dart';
 import '../import/import_page.dart';
 import '../chat/chat_list_page.dart';
 import '../quest/quest_page.dart';
+import '../backup/backup_page.dart';
+import '../settings/settings_page.dart';
 
 
 class HomePage extends StatefulWidget {
@@ -186,6 +189,11 @@ class _HomePageState extends State<HomePage> {
                   _drawerItem(Icons.file_download_outlined, 'Export', Colors.teal, () => _push(const ExportPage())),
                   _drawerItem(Icons.file_upload_outlined, 'Import', Colors.indigo, () => _push(const ImportPage())),
                 ],
+                if (isAdmin || isOrgAdmin)
+                  _drawerItem(Icons.cloud_upload_outlined, 'Backup Cloud', Colors.deepPurple, () => _push(const BackupPage())),
+
+                _sectionLabel('TAMPILAN'),
+                _drawerItem(Icons.settings_outlined, 'Pengaturan', Colors.blueGrey, () => _push(const SettingsPage())),
 
                 _sectionLabel('AKUN'),
                 _drawerItem(Icons.person_outlined, 'Profile', Colors.pink, () => _navigate(7)),
@@ -284,17 +292,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _confirmLogout(BuildContext context) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Keluar'),
-        content: const Text('Yakin ingin keluar?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Batal')),
-          ElevatedButton(onPressed: () => Navigator.pop(c, true), child: const Text('Keluar')),
-        ],
-      ),
-    );
+    final ok = await AppDialogs.showConfirm(context, message: 'Yakin ingin keluar?', confirmLabel: 'Keluar', danger: true);
     if (ok == true) {
       if (context.mounted) context.read<OrganizationProvider>().clear();
       if (context.mounted) context.read<AuthProvider>().logout();

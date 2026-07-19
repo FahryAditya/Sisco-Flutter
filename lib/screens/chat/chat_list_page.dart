@@ -12,6 +12,7 @@ import '../../utils/animations.dart';
 import '../../widgets/empty_state.dart';
 import 'chat_contacts_page.dart';
 import 'chat_room_page.dart';
+import '../../widgets/character_dialog.dart';
 
 /// Daftar percakapan pengguna saat ini (realtime). Titik masuk fitur Pesan.
 class ChatListPage extends StatelessWidget {
@@ -233,28 +234,7 @@ class ChatListPage extends StatelessWidget {
 
   static Future<void> _confirmClear(BuildContext context, String conversationId,
       String otherName, String meId) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Bersihkan pesan chat'),
-        content: Text(
-          'Semua pesan dengan $otherName akan dihapus dari tampilan Anda. '
-          'Lawan bicara tetap dapat melihat percakapan ini. '
-          'Tindakan ini tidak dapat dibatalkan.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c, false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
-            onPressed: () => Navigator.pop(c, true),
-            child: const Text('Bersihkan'),
-          ),
-        ],
-      ),
-    );
+    final ok = await AppDialogs.showConfirm(context, message: 'Semua pesan dengan $otherName akan dihapus dari tampilan Anda. Lawan bicara tetap dapat melihat percakapan ini. Tindakan ini tidak dapat dibatalkan.', confirmLabel: 'Bersihkan', danger: true);
     if (ok != true) return;
     try {
       await ChatService.clearMessagesForUser(

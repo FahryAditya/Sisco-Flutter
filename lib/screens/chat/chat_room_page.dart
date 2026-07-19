@@ -11,8 +11,11 @@ import '../../services/chat_service.dart';
 import '../../services/chat_notifier.dart';
 import '../../services/notification_service.dart';
 import '../../services/directory_service.dart';
+import '../../services/voice_service.dart';
+import '../../services/cloudinary_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/character_dialog.dart';
 
 /// Ruang percakapan 1-lawan-1. Realtime lewat [ChatService.messagesStream].
 ///
@@ -43,11 +46,10 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   bool _searching = false;
   String _searchQuery = '';
 
-  /// Pesan yang sedang dibalas (quote) — null bila tidak sedang membalas.
   ReplyPreview? _replyTo;
-
-  /// Pesan yang sedang diedit — null bila tidak sedang mengedit.
   ChatMessage? _editing;
+
+  bool _isRecording = false;
 
   late final String _cid;
 
@@ -307,23 +309,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   }
 
   Future<void> _confirmDelete(ChatMessage msg) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Hapus pesan'),
-        content: const Text('Pesan ini akan dihapus untuk semua orang.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(c, false),
-              child: const Text('Batal')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
-            onPressed: () => Navigator.pop(c, true),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
-    );
+    final ok = await AppDialogs.showConfirm(context, message: 'Pesan ini akan dihapus untuk semua orang.', confirmLabel: 'Hapus', danger: true);
     if (ok != true) return;
     try {
       await ChatService.deleteMessage(conversationId: _cid, messageId: msg.id);
@@ -513,28 +499,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   Future<void> _confirmClearMessages() async {
     final me = _meId;
     if (me == null) return;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Bersihkan pesan chat'),
-        content: const Text(
-          'Semua pesan akan dihapus dari tampilan Anda. '
-          'Lawan bicara tetap dapat melihat percakapan ini. '
-          'Tindakan ini tidak dapat dibatalkan.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c, false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
-            onPressed: () => Navigator.pop(c, true),
-            child: const Text('Bersihkan'),
-          ),
-        ],
-      ),
-    );
+    final ok = await AppDialogs.showConfirm(context, message: 'Semua pesan akan dihapus dari tampilan Anda. Lawan bicara tetap dapat melihat percakapan ini. Tindakan ini tidak dapat dibatalkan.', confirmLabel: 'Bersihkan', danger: true);
     if (ok != true) return;
     try {
       await ChatService.clearMessagesForUser(conversationId: _cid, uid: me);
@@ -764,6 +729,8 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                           ),
                         ],
                       )
+                    else if (msg.isVoice)
+                      _voiceBubble(msg, mine, textColor)
                     else
                       Text(
                         msg.text,
@@ -809,6 +776,42 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _voiceBubble(ChatMessage msg, bool mine, Color textColor) {
+    return Column(
+      crossAxisAlignment: mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              mine ? Icons.play_circle_filled : Icons.play_circle_filled,
+              color: textColor, size: 28,
+            ),
+            const SizedBox(width: 8),
+            Container(
+              width: 80, height: 4,
+              decoration: BoxDecoration(
+                color: textColor.withAlpha(80),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              msg.voiceDuration != null ? '${msg.voiceDuration! ~/ 60}:${(msg.voiceDuration! % 60).toString().padLeft(2, '0')}' : '0:05',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12, color: textColor.withAlpha(180),
+              ),
+            ),
+          ],
+        ),
+        if (msg.text != '[Pesan Suara]' && msg.text.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(msg.text, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: textColor.withAlpha(200))),
+        ],
+      ],
     );
   }
 
@@ -993,53 +996,158 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            _voiceButton(me),
+            const SizedBox(width: 6),
             Expanded(
-              child: TextField(
-                controller: _textC,
-                minLines: 1,
-                maxLines: 5,
-                textCapitalization: TextCapitalization.sentences,
-                style: GoogleFonts.plusJakartaSans(fontSize: 14.5),
-                decoration: InputDecoration(
-                  hintText: 'Tulis pesan...',
-                  filled: true,
-                  fillColor: AppColors.background,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
+              child: _isRecording
+                  ? _recordingIndicator()
+                  : TextField(
+                      controller: _textC,
+                      minLines: 1,
+                      maxLines: 5,
+                      textCapitalization: TextCapitalization.sentences,
+                      style: GoogleFonts.plusJakartaSans(fontSize: 14.5),
+                      decoration: InputDecoration(
+                        hintText: 'Tulis pesan...',
+                        filled: true,
+                        fillColor: AppColors.background,
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+            ),
+            const SizedBox(width: 8),
+            if (!_isRecording)
+              Material(
+                color: AppColors.primary,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: _sending ? null : () => _send(me),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: _sending
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Icon(_editing != null ? Icons.check : Icons.send_rounded,
+                            color: Colors.white, size: 20),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Material(
-              color: AppColors.primary,
-              shape: const CircleBorder(),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: _sending ? null : () => _send(me),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: _sending
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Icon(_editing != null ? Icons.check : Icons.send_rounded,
-                          color: Colors.white, size: 20),
-                ),
-              ),
-            ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _voiceButton(UserModel me) {
+    return GestureDetector(
+      onLongPressStart: (_) async {
+        if (_editing != null) return;
+        final perm = await VoiceService.instance.requestPermission();
+        if (!perm) return;
+        final path = await VoiceService.instance.startRecording();
+        if (path != null && mounted) {
+          setState(() => _isRecording = true);
+        }
+      },
+      onLongPressEnd: (_) async {
+        if (!_isRecording) return;
+        final path = await VoiceService.instance.stopRecording();
+        if (path == null || !mounted) {
+          setState(() => _isRecording = false);
+          return;
+        }
+        setState(() => _isRecording = false);
+        _sendVoice(me, path);
+      },
+      onLongPressCancel: () async {
+        if (!_isRecording) return;
+        await VoiceService.instance.cancelRecording();
+        if (mounted) setState(() => _isRecording = false);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: _isRecording ? AppColors.danger.withAlpha(30) : Colors.transparent,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          _isRecording ? Icons.mic : Icons.mic_none,
+          color: _isRecording ? AppColors.danger : AppColors.textHint,
+          size: 22,
+        ),
+      ),
+    );
+  }
+
+  Widget _recordingIndicator() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.danger.withAlpha(15),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.fiber_manual_record, color: AppColors.danger, size: 14),
+          const SizedBox(width: 8),
+          Text(
+            'Rekam suara...',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14, color: AppColors.danger, fontWeight: FontWeight.w600,
+            ),
+          ),
+          const Spacer(),
+            GestureDetector(
+            onTap: () async {
+              await VoiceService.instance.cancelRecording();
+              if (mounted) setState(() => _isRecording = false);
+            },
+            child: Icon(Icons.close, size: 18, color: AppColors.textHint),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _sendVoice(UserModel me, String path) async {
+    try {
+      final bytes = await VoiceService.instance.readBytes(path);
+      if (bytes == null) return;
+
+      setState(() => _sending = true);
+
+      final fileName = 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final downloadUrl = await CloudinaryService.uploadBytes(bytes, fileName);
+
+      await ChatService.sendMessage(
+        sender: me,
+        recipientId: widget.recipientId,
+        recipientName: widget.recipientName,
+        recipientRole: widget.recipientRole,
+        text: '[Pesan Suara]',
+        voiceUrl: downloadUrl,
+        voiceDuration: null,
+      );
+
+      _scrollToBottom();
+    } catch (e) {
+      _showError('Gagal mengirim pesan suara: $e');
+    } finally {
+      await VoiceService.instance.deleteFile(path);
+      if (mounted) setState(() => _sending = false);
+    }
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -1203,7 +1311,7 @@ class _TypingDotsState extends State<_TypingDots>
               margin: const EdgeInsets.symmetric(horizontal: 1.5),
               width: 6 * scale,
               height: 6 * scale,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: AppColors.textHint,
                 shape: BoxShape.circle,
               ),

@@ -66,10 +66,28 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _subscribeOrgs() {
+    _orgSub?.cancel();
     _orgSub = FirestoreService.orgsRef.snapshots().listen((snap) {
       _orgIds = snap.docs.map((d) => d.id).toList();
       totalAnggota = _orgIds.length;
-      if (_orgIds.isNotEmpty) _subscribeAllData();
+      if (mounted) {
+        final orgProvider = context.read<OrganizationProvider>();
+        final currentIds = orgProvider.orgs.map((o) => o.id).toSet();
+        final serverIds = _orgIds.toSet();
+        if (currentIds.length != serverIds.length ||
+            !currentIds.containsAll(serverIds)) {
+          unawaited(orgProvider.refresh());
+        }
+      }
+      if (_orgIds.isEmpty) {
+        _attSub?.cancel();
+        _cashSub?.cancel();
+        _refreshTimer?.cancel();
+        totalHadir = 0;
+        totalKas = 0;
+      } else {
+        _subscribeAllData();
+      }
       if (mounted) setState(() => _loading = false);
     }, onError: (_) {
       if (mounted) setState(() => _loading = false);
@@ -114,7 +132,7 @@ class _DashboardPageState extends State<DashboardPage> {
       body: RefreshIndicator(
         onRefresh: () async {
           _subscribeOrgs();
-          _subscribeAllData();
+          if (_orgIds.isNotEmpty) _subscribeAllData();
         },
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -382,5 +400,4 @@ class _DashboardPageState extends State<DashboardPage> {
     Navigator.push(context, SmoothPageRoute(builder: (_) => page));
   }
 }
-
 

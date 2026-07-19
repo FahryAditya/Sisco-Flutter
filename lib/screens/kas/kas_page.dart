@@ -72,7 +72,11 @@ class _KasPageState extends State<KasPage> {
             items: orgs.map((o) => AppDropdownItem(value: o.id, label: o.nama)).toList(),
             onChanged: (v) {
               setState(() => _selectedOrgId = v);
-              if (v != null) context.read<CashProvider>().subscribe(v);
+              if (v == null) {
+                context.read<CashProvider>().clear();
+              } else {
+                context.read<CashProvider>().subscribe(v);
+              }
             },
           ),
           const SizedBox(height: 16),

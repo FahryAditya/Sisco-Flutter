@@ -26,16 +26,7 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
   }
 
   Future<void> _delete(String id) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus pengeluaran?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus', style: TextStyle(color: AppColors.danger))),
-        ],
-      ),
-    );
+    final confirm = await AppDialogs.showConfirm(context, message: 'Hapus pengeluaran?', confirmLabel: 'Hapus', danger: true);
     if (confirm == true) {
       if (!mounted) return;
       AppDialogs.showLoading(context, kind: LoadingKind.sinkronasi);
@@ -66,7 +57,11 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
             items: orgs.map((o) => AppDropdownItem(value: o.id, label: o.nama)).toList(),
             onChanged: (v) {
               setState(() => _selectedOrgId = v);
-              if (v != null) context.read<CashProvider>().subscribe(v);
+              if (v == null) {
+                context.read<CashProvider>().clear();
+              } else {
+                context.read<CashProvider>().subscribe(v);
+              }
             },
           ),
           const SizedBox(height: 16),
